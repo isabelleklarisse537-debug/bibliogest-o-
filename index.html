@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bibliogestão - Sistema de Gestão de Acervo</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <aside>
+    <div class="brand-header">
+      <div class="brand-icon">📚</div>
+      <div class="brand-title">
+        <h2>Bibliogestão</h2>
+        <span>Painel do Acervo</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-menu">
+      <button class="nav-item active" onclick="goToScreen('screen-inicio', this)">
+        <span>🏠</span> Início
+      </button>
+
+      <button class="nav-item" onclick="goToScreen('screen-pendencias', this)">
+        <span>⚠️</span> Pendências
+      </button>
+
+      <button class="nav-item" onclick="goToScreen('screen-cadastros', this)">
+        <span>👤</span> Cadastros
+      </button>
+
+      <button class="nav-item" onclick="goToScreen('screen-emprestimos', this)">
+        <span>📖</span> Empréstimos
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="file-badge">
+        <span>Documento ativo:</span>
+        <strong id="sidebar-filename">Nenhum carregado</strong>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+
+    <div class="screen-header cabecalho-com-banco">
+      <div class="screen-title">
+        <h1 id="screen-heading">Visão Geral</h1>
+        <p id="screen-subheading">
+          Acompanhe métricas em tempo real e gerencie os relatórios do acervo
+        </p>
+      </div>
+
+      <div class="botoes-arquivos">
+        <button type="button" class="btn-upload-label" id="btnAbrirBancoSQL">
+          🗄️ Acessar Banco de Dados
+        </button>
+
+        <input type="file" id="sqlDatabaseUploader"
+          accept=".db,.sqlite,.sqlite3" hidden>
+
+        <label for="fileUploader" class="btn-upload-label">
+          📂 Importar Documento (JSON / CSV)
+        </label>
+
+        <input type="file" id="fileUploader"
+          accept=".json,.csv" hidden>
+      </div>
+    </div>
+
+    <!-- ÁREA DO BANCO DE DADOS -->
+
+    <section id="areaBanco" class="card-panel">
+      <h2>🗄️ Banco de Dados da Biblioteca</h2>
+
+      <p id="statusBanco">Nenhum banco de dados carregado.</p>
+
+      <div class="banco-controles">
+        <label for="selecionarTabela">
+          <strong>Selecionar tabela:</strong>
+        </label>
+
+        <select id="selecionarTabela">
+          <option value="">Nenhuma tabela disponível</option>
+        </select>
+      </div>
+
+      <div class="banco-tabela">
+        <table id="tabelaVisualizacao">
+          <thead>
+            <tr>
+              <th>Dados do banco</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>Carregue um banco SQLite para visualizar os registros.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p id="totalRegistros"></p>
+
+      <div class="banco-acoes">
+        <button type="button" class="btn-banco-secundario" id="btnFecharBanco">
+          Fechar banco
+        </button>
+      </div>
+    </section>
+
+    <!-- TELA INÍCIO -->
+
+    <section id="screen-inicio" class="screen active">
+
+      <div class="hero-banner">
+        <h2>Bem-vindo ao Bibliogestão</h2>
+        <p>
+          Sistema inteligente para organização de relatórios,
+          acompanhamento de prazos e notificação ágil via WhatsApp aos alunos.
+        </p>
+      </div>
+
+      <div class="stats-grid">
+
+        <div class="stat-card" onclick="goToScreenByName('screen-cadastros')">
+          <div>
+            <h4>Total Cadastros</h4>
+            <div class="value" id="kpi-total">0</div>
+          </div>
+          <div class="stat-icon-wrapper"
+            style="background:#eff6ff; color:var(--primary-blue);">
+            👤
+          </div>
+        </div>
+
+        <div class="stat-card" onclick="goToScreenByName('screen-emprestimos')">
+          <div>
+            <h4>Empréstimos</h4>
+            <div class="value" id="kpi-loans">0</div>
+          </div>
+          <div class="stat-icon-wrapper"
+            style="background:var(--accent-yellow-light); color:#854d0e;">
+            📖
+          </div>
+        </div>
+
+        <div class="stat-card" onclick="goToScreenByName('screen-pendencias')">
+          <div>
+            <h4>Pendências em Atraso</h4>
+            <div class="value" id="kpi-pending"
+              style="color:var(--danger);">0</div>
+          </div>
+          <div class="stat-icon-wrapper"
+            style="background:var(--danger-bg); color:var(--danger);">
+            ⚠️
+          </div>
+        </div>
+
+      </div>
+
+      <div class="quick-actions">
+
+        <div class="action-box">
+          <h3>⚡ Acesso Rápido às Pendências</h3>
+          <p>
+            Consulte alunos com prazo de devolução expirado
+            e envie mensagens de cobrança.
+          </p>
+          <button class="nav-item active"
+            style="justify-content:center; width:auto;"
+            onclick="goToScreenByName('screen-pendencias')">
+            Ir para Tela de Pendências →
+          </button>
+        </div>
+
+        <div class="action-box">
+          <h3>📋 Base de Alunos & Livros</h3>
+          <p>
+            Navegue entre os registros dos estudantes
+            e os títulos atualmente em circulação.
+          </p>
+          <button class="nav-item"
+            style="border:1px solid var(--border); justify-content:center; width:auto;"
+            onclick="goToScreenByName('screen-cadastros')">
+            Ver Todos os Cadastros →
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TELA PENDÊNCIAS -->
+
+    <section id="screen-pendencias" class="screen">
+      <div class="card-panel">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome Completo</th>
+                <th>Série / Turma</th>
+                <th>Telefone</th>
+                <th>Livro Pendente</th>
+                <th>Tempo do Fim do Empréstimo</th>
+                <th style="text-align:right;">Cobrança WhatsApp</th>
+              </tr>
+            </thead>
+
+            <tbody id="grid-pendencias">
+              <tr>
+                <td colspan="6" class="empty-state">
+                  <div class="empty-state-icon">📋</div>
+                  Importe um documento para listar as pendências.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELA CADASTROS -->
+
+    <section id="screen-cadastros" class="screen">
+      <div class="card-panel">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome Completo</th>
+                <th>Série / Turma</th>
+                <th>E-mail</th>
+                <th>Telefone</th>
+                <th>Endereço</th>
+              </tr>
+            </thead>
+
+            <tbody id="grid-cadastro">
+              <tr>
+                <td colspan="5" class="empty-state">
+                  <div class="empty-state-icon">📋</div>
+                  Nenhum registro cadastrado. Carregue um arquivo para começar.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELA EMPRÉSTIMOS -->
+
+    <section id="screen-emprestimos" class="screen">
+      <div class="card-panel">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome do Livro</th>
+                <th>Nome do Aluno</th>
+                <th>Série / Turma</th>
+                <th>Data de Devolução</th>
+              </tr>
+            </thead>
+
+            <tbody id="grid-emprestimos">
+              <tr>
+                <td colspan="4" class="empty-state">
+                  <div class="empty-state-icon">📖</div>
+                  Nenhum empréstimo ativo no momento.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+  <script src="script.js"></script>
+
+</body>
+</html>
