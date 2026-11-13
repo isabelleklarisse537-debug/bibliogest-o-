@@ -867,7 +867,154 @@
   }
 
   function renderReaders() {
-    // Implementado no RF-04.
+    const body = $("#readers-body");
+    const counter = $("#reader-count");
+    const classSelect = $("#reader-class-filter");
+    if (!body || !counter) return;
+
+    const dataset = data();
+
+    if (!hasAnyData()) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state">Importe um banco de dados para visualizar os alunos.</td></tr>';
+      counter.textContent = "Nenhum aluno carregado.";
+      if (classSelect) {
+        classSelect.innerHTML = '<option value="">Todas as turmas</option>';
+      }
+      return;
+    }
+
+    if (classSelect) {
+      const previous = classSelect.value;
+      const classes = Array.from(
+        new Set(dataset.readers.map(reader => reader.className).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+      const options = ['<option value="">Todas as turmas</option>'];
+      classes.forEach(className => {
+        options.push(
+          `<option value="${utils.escapeHtml(className)}">${utils.escapeHtml(
+            className
+          )}</option>`
+        );
+      });
+      if (dataset.readers.some(reader => !reader.className)) {
+        options.push('<option value="__empty__">Sem turma</option>');
+      }
+      classSelect.innerHTML = options.join("");
+      classSelect.value = classes.includes(previous) ? previous : "";
+    }
+
+    if (!dataset.readers.length) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state">Nenhum aluno foi reconhecido no banco importado.</td></tr>';
+      counter.textContent = "Nenhum aluno carregado.";
+      return;
+    }
+
+    const view = BG.analytics.compute(dataset);
+    const search = utils.normalizeSearch($("#reader-search")?.value || "");
+    const classFilter = classSelect?.value || "";
+    const statusFilter = $("#reader-status-filter")?.value || "";
+
+    const decorated = dataset.readers.map(reader => {
+      const key = reader.registration || reader.name;
+      return {
+        ...reader,
+        activeLoans: view.activeByReader.get(key) || 0,
+        pendingLoans: view.overdueByReader.get(key) || 0,
+        isActive: utils.readerIsActive(reader.status),
+        searchText: utils.normalizeSearch(
+          [
+            reader.registration,
+            reader.name,
+            reader.className,
+            reader.email,
+            reader.phone,
+            reader.gender
+          ].join(" ")
+        )
+      };
+    });
+
+    const filtered = decorated.filter(reader => {
+      if (search && !reader.searchText.includes(search)) return false;
+      if (classFilter === "__empty__" && reader.className) return false;
+      if (classFilter && classFilter !== "__empty__" && reader.className !== classFilter) {
+        return false;
+      }
+      if (statusFilter === "active" && !reader.isActive) return false;
+      if (statusFilter === "inactive" && reader.isActive) return false;
+      return true;
+    });
+
+    filtered.sort((a, b) =>
+      a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" })
+    );
+
+    counter.textContent = `${utils.formatNumber(filtered.length)} de ${utils.formatNumber(
+      dataset.readers.length
+    )} aluno(s) exibido(s).`;
+
+    if (!filtered.length) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state">Nenhum aluno corresponde aos filtros selecionados.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = filtered
+      .map(reader => {
+        const status = {
+          tone: reader.isActive ? "success" : "neutral",
+          label: utils.readerStatusLabel(reader.status)
+        };
+
+        const actionMessage =
+          reader.pendingLoans > 0
+            ? `Olá, ${reader.name}! Identificamos ${reader.pendingLoans} empréstimo(s) em atraso na biblioteca. Podemos combinar a devolução?`
+            : `Olá, ${reader.name}! Aqui é da biblioteca escolar.`;
+        const whatsapp = utils.whatsappLink(reader.phone, actionMessage);
+
+        const contact = [
+          reader.phone ? utils.formatPhone(reader.phone) : "",
+          reader.email
+        ]
+          .filter(Boolean)
+          .map((item, index) =>
+            index === 0
+              ? `<span class="cell-title">${utils.escapeHtml(item)}</span>`
+              : `<span class="cell-sub">${utils.escapeHtml(item)}</span>`
+          )
+          .join("");
+
+        return `
+          <tr>
+            <td><strong>${utils.escapeHtml(reader.registration || "—")}</strong></td>
+            <td>
+              <span class="cell-title">${utils.escapeHtml(reader.name)}</span>
+              ${reader.gender ? `<span class="cell-sub">${utils.escapeHtml(reader.gender)}</span>` : ""}
+            </td>
+            <td>${utils.escapeHtml(reader.className || "—")}</td>
+            <td>${contact || "—"}</td>
+            <td>${statusPill(status)}</td>
+            <td><strong>${utils.formatNumber(reader.activeLoans)}</strong></td>
+            <td>${
+              reader.pendingLoans
+                ? `<span class="status-pill danger">${utils.formatNumber(
+                    reader.pendingLoans
+                  )}</span>`
+                : '<span class="cell-sub">0</span>'
+            }</td>
+            <td>${
+              whatsapp
+                ? `<a class="link-button" href="${utils.escapeHtml(
+                    whatsapp
+                  )}" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>`
+                : '<span class="cell-sub">Sem telefone</span>'
+            }</td>
+          </tr>
+        `;
+      })
+      .join("");
   }
 
   function renderLoans() {
