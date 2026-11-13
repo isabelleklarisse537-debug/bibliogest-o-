@@ -1283,7 +1283,107 @@
   }
 
   function renderLibrarians() {
-    // Implementado no RF-07.
+    const body = $("#librarians-body");
+    const counter = $("#librarian-count");
+    if (!body || !counter) return;
+
+    const dataset = data();
+
+    if (!hasAnyData()) {
+      body.innerHTML =
+        '<tr><td colspan="6" class="empty-state">Importe um banco de dados para visualizar os bibliotecários.</td></tr>';
+      counter.textContent = "Nenhum bibliotecário carregado.";
+      return;
+    }
+
+    if (!dataset.librarians.length) {
+      body.innerHTML =
+        '<tr><td colspan="6" class="empty-state">Nenhum bibliotecário foi reconhecido no banco importado.</td></tr>';
+      counter.textContent = "Nenhum bibliotecário carregado.";
+      return;
+    }
+
+    const view = BG.analytics.compute(dataset);
+    const search = utils.normalizeSearch($("#librarian-search")?.value || "");
+    const totalLoans = view.loans.length;
+
+    const loanCounts = new Map();
+    view.loans.forEach(loan => {
+      const key = loan.librarianRegistration || loan.librarianName;
+      if (!key) return;
+      loanCounts.set(key, (loanCounts.get(key) || 0) + 1);
+    });
+
+    const decorated = dataset.librarians.map(librarian => {
+      const key = librarian.registration || librarian.name;
+      return {
+        ...librarian,
+        loanCount: loanCounts.get(key) || 0,
+        searchText: utils.normalizeSearch(
+          [
+            librarian.registration,
+            librarian.name,
+            librarian.login,
+            librarian.phone
+          ].join(" ")
+        )
+      };
+    });
+
+    const filtered = decorated
+      .filter(librarian => {
+        if (!search) return true;
+        return librarian.searchText.includes(search);
+      })
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" })
+      );
+
+    counter.textContent = `${utils.formatNumber(filtered.length)} de ${utils.formatNumber(
+      dataset.librarians.length
+    )} bibliotecário(s) exibido(s).`;
+
+    if (!filtered.length) {
+      body.innerHTML =
+        '<tr><td colspan="6" class="empty-state">Nenhum bibliotecário corresponde aos filtros selecionados.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = filtered
+      .map(librarian => {
+        const participation = totalLoans
+          ? (librarian.loanCount / totalLoans) * 100
+          : 0;
+        return `
+          <tr>
+            <td><strong>${utils.escapeHtml(librarian.registration || "—")}</strong></td>
+            <td>
+              <span class="cell-title">${utils.escapeHtml(librarian.name)}</span>
+            </td>
+            <td>${utils.escapeHtml(librarian.login || "—")}</td>
+            <td>${utils.escapeHtml(
+              librarian.phone ? utils.formatPhone(librarian.phone) : "—"
+            )}</td>
+            <td><strong>${utils.formatNumber(
+              librarian.loanCount
+            )}</strong> <span class="cell-sub">de ${utils.formatNumber(
+              totalLoans
+            )}</span></td>
+            <td>
+              <div class="bar-track" title="${utils.escapeHtml(
+                utils.formatPercent(participation)
+              )}">
+                <div class="bar-fill" style="width:${Math.max(
+                  participation,
+                  librarian.loanCount ? 3 : 0
+                )}%"></div>
+              </div>
+              <span class="cell-sub">${utils.formatPercent(participation)}</span>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
   }
 
   function renderReports() {
