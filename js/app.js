@@ -1017,8 +1017,169 @@
       .join("");
   }
 
+  function loanDeadlineLabel(loan) {
+    if (loan.returnDate) {
+      return loan.returnDate
+        ? `Devolvido em ${utils.formatDate(loan.returnDate)}`
+        : "Devolvido";
+    }
+    if (loan.status.key === "overdue") {
+      return `${utils.formatNumber(loan.status.days)} dia(s) em atraso`;
+    }
+    if (loan.status.key === "dueToday") return "Vence hoje";
+    if (loan.status.key === "active") {
+      return `${utils.formatNumber(loan.status.days)} dia(s) restante(s)`;
+    }
+    return "Sem data de devolução";
+  }
+
+  function renderLoanSummary(view) {
+    const container = $("#loan-summary");
+    if (!container) return;
+
+    if (!hasAnyData()) {
+      container.innerHTML = "";
+      return;
+    }
+
+    const metrics = view.metrics;
+    const chips = [
+      { label: "Todos", count: metrics.loans, tone: "" },
+      { label: "Em andamento", count: metrics.activeLoans, tone: "" },
+      { label: "Vence hoje", count: metrics.dueTodayLoans, tone: "is-warning" },
+      { label: "Atrasados", count: metrics.overdueLoans, tone: "is-danger" },
+      { label: "Devolvidos", count: metrics.returnedLoans, tone: "is-success" }
+    ];
+
+    if (view.unknownLoans.length) {
+      chips.push({
+        label: "Sem data",
+        count: view.unknownLoans.length,
+        tone: ""
+      });
+    }
+
+    container.innerHTML = chips
+      .map(
+        chip => `
+          <span class="chip ${chip.tone}">
+            ${utils.escapeHtml(chip.label)}
+            <strong>${utils.formatNumber(chip.count)}</strong>
+          </span>
+        `
+      )
+      .join("");
+  }
+
   function renderLoans() {
-    // Implementado no RF-05.
+    const body = $("#loans-body");
+    const counter = $("#loan-count");
+    if (!body || !counter) return;
+
+    const dataset = data();
+    const view = BG.analytics.compute(dataset);
+    renderLoanSummary(view);
+
+    if (!hasAnyData()) {
+      body.innerHTML =
+        '<tr><td colspan="9" class="empty-state">Importe um banco de dados para visualizar os empréstimos.</td></tr>';
+      counter.textContent = "Nenhum empréstimo carregado.";
+      return;
+    }
+
+    if (!dataset.loans.length) {
+      body.innerHTML =
+        '<tr><td colspan="9" class="empty-state">Nenhum empréstimo foi reconhecido no banco importado.</td></tr>';
+      counter.textContent = "Nenhum empréstimo carregado.";
+      return;
+    }
+
+    const search = utils.normalizeSearch($("#loan-search")?.value || "");
+    const statusFilter = $("#loan-status-filter")?.value || "";
+
+    const filtered = view.loans.filter(loan => {
+      if (statusFilter && loan.status.key !== statusFilter) return false;
+      if (!search) return true;
+      const haystack = utils.normalizeSearch(
+        [
+          loan.id,
+          loan.bookTitle,
+          loan.bookAuthor,
+          loan.bookCode,
+          loan.readerName,
+          loan.readerRegistration,
+          loan.className,
+          loan.librarianName
+        ].join(" ")
+      );
+      return haystack.includes(search);
+    });
+
+    const priority = {
+      overdue: 0,
+      dueToday: 1,
+      active: 2,
+      unknown: 3,
+      returned: 4
+    };
+    const dateValue = value =>
+      value instanceof Date ? value.getTime() : 0;
+
+    filtered.sort((a, b) => {
+      const difference =
+        (priority[a.status.key] ?? 9) - (priority[b.status.key] ?? 9);
+      if (difference !== 0) return difference;
+
+      if (a.status.key === "overdue" && b.status.key === "overdue") {
+        return b.status.days - a.status.days;
+      }
+      if (a.status.key === "active" && b.status.key === "active") {
+        return dateValue(a.dueDate) - dateValue(b.dueDate);
+      }
+      if (a.status.key === "returned" && b.status.key === "returned") {
+        return dateValue(b.returnDate) - dateValue(a.returnDate);
+      }
+      return dateValue(b.loanDate) - dateValue(a.loanDate);
+    });
+
+    counter.textContent = `${utils.formatNumber(filtered.length)} de ${utils.formatNumber(
+      view.loans.length
+    )} empréstimo(s) exibido(s).`;
+
+    if (!filtered.length) {
+      body.innerHTML =
+        '<tr><td colspan="9" class="empty-state">Nenhum empréstimo corresponde aos filtros selecionados.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = filtered
+      .map(loan => {
+        const bookSub = loan.bookAuthor || (loan.bookCode ? `Tombo ${loan.bookCode}` : "");
+        const readerSub = loan.readerRegistration
+          ? `Matrícula ${loan.readerRegistration}`
+          : "";
+
+        return `
+          <tr>
+            <td><strong>${utils.escapeHtml(loan.id || "—")}</strong></td>
+            <td>
+              <span class="cell-title">${utils.escapeHtml(loan.bookTitle)}</span>
+              ${bookSub ? `<span class="cell-sub">${utils.escapeHtml(bookSub)}</span>` : ""}
+            </td>
+            <td>
+              <span class="cell-title">${utils.escapeHtml(loan.readerName)}</span>
+              ${readerSub ? `<span class="cell-sub">${utils.escapeHtml(readerSub)}</span>` : ""}
+            </td>
+            <td>${utils.escapeHtml(loan.className || "—")}</td>
+            <td>${utils.escapeHtml(loan.librarianName || "—")}</td>
+            <td>${utils.formatDate(loan.loanDate)}</td>
+            <td>${utils.formatDate(loan.dueDate)}</td>
+            <td>${loanDeadlineLabel(loan)}</td>
+            <td>${statusPill(loan.status)}</td>
+          </tr>
+        `;
+      })
+      .join("");
   }
 
   function renderPending() {
