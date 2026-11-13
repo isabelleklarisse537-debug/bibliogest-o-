@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bibliogestão - Sistema de Gestão de Acervo</title>
+  <title>Bibliogestão — Gestão do Acervo</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,213 +14,489 @@
 
 <body>
 
-  <aside>
+  <aside class="sidebar">
     <div class="brand-header">
-      <div class="brand-icon">📚</div>
+      <div class="brand-icon" aria-hidden="true">📚</div>
       <div class="brand-title">
         <h2>Bibliogestão</h2>
         <span>Painel do Acervo</span>
       </div>
     </div>
 
-    <nav class="sidebar-menu">
-      <button class="nav-item active" onclick="goToScreen('screen-inicio', this)">
-        <span>🏠</span> Início
+    <nav class="sidebar-menu" aria-label="Menu principal">
+      <button class="nav-item active" data-screen-target="overview">
+        <span class="nav-icon" aria-hidden="true">🏠</span> Visão Geral
       </button>
 
-      <button class="nav-item" onclick="goToScreen('screen-pendencias', this)">
-        <span>⚠️</span> Pendências
+      <button class="nav-item" data-screen-target="books">
+        <span class="nav-icon" aria-hidden="true">📚</span> Acervo de Livros
       </button>
 
-      <button class="nav-item" onclick="goToScreen('screen-cadastros', this)">
-        <span>👤</span> Cadastros
+      <button class="nav-item" data-screen-target="readers">
+        <span class="nav-icon" aria-hidden="true">👥</span> Alunos
       </button>
 
-      <button class="nav-item" onclick="goToScreen('screen-emprestimos', this)">
-        <span>📖</span> Empréstimos
+      <button class="nav-item" data-screen-target="loans">
+        <span class="nav-icon" aria-hidden="true">📖</span> Empréstimos
+      </button>
+
+      <button class="nav-item" data-screen-target="pending">
+        <span class="nav-icon" aria-hidden="true">⚠️</span> Pendências
+        <span class="nav-badge" id="nav-pending-badge" hidden>0</span>
+      </button>
+
+      <button class="nav-item" data-screen-target="librarians">
+        <span class="nav-icon" aria-hidden="true">🧑‍💼</span> Bibliotecários
+      </button>
+
+      <button class="nav-item" data-screen-target="reports">
+        <span class="nav-icon" aria-hidden="true">📊</span> Relatórios
+      </button>
+
+      <button class="nav-item" data-screen-target="database">
+        <span class="nav-icon" aria-hidden="true">🗄️</span> Base de Dados
       </button>
     </nav>
 
     <div class="sidebar-footer">
       <div class="file-badge">
-        <span>Documento ativo:</span>
+        <span>Banco ativo:</span>
         <strong id="sidebar-filename">Nenhum carregado</strong>
+        <small id="sidebar-file-meta">Importe um arquivo SQLite</small>
       </div>
     </div>
   </aside>
 
   <main>
-
-    <div class="screen-header cabecalho-com-banco">
+    <header class="screen-header">
       <div class="screen-title">
         <h1 id="screen-heading">Visão Geral</h1>
         <p id="screen-subheading">
-          Acompanhe métricas em tempo real e gerencie os relatórios do acervo
+          Acompanhe os indicadores do acervo e da circulação da biblioteca
         </p>
       </div>
 
       <div class="botoes-arquivos">
-        <button type="button" class="btn-upload-label" id="btnAbrirBancoSQL">
-          🗄️ Acessar Banco de Dados
+        <button type="button" class="btn-primary" id="btnAbrirBancoSQL">
+          🗄️ Importar banco
         </button>
 
-        <input type="file" id="sqlDatabaseUploader"
-          accept=".db,.sqlite,.sqlite3" hidden>
-
-        <label for="fileUploader" class="btn-upload-label">
-          📂 Importar Documento (JSON / CSV)
-        </label>
-
-        <input type="file" id="fileUploader"
-          accept=".json,.csv" hidden>
-      </div>
-    </div>
-
-    <!-- ÁREA DO BANCO DE DADOS -->
-
-    <section id="areaBanco" class="card-panel">
-      <h2>🗄️ Banco de Dados da Biblioteca</h2>
-
-      <p id="statusBanco">Nenhum banco de dados carregado.</p>
-
-      <div class="banco-controles">
-        <label for="selecionarTabela">
-          <strong>Selecionar tabela:</strong>
-        </label>
-
-        <select id="selecionarTabela">
-          <option value="">Nenhuma tabela disponível</option>
-        </select>
-      </div>
-
-      <div class="banco-tabela">
-        <table id="tabelaVisualizacao">
-          <thead>
-            <tr>
-              <th>Dados do banco</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr>
-              <td>Carregue um banco SQLite para visualizar os registros.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p id="totalRegistros"></p>
-
-      <div class="banco-acoes">
-        <button type="button" class="btn-banco-secundario" id="btnFecharBanco">
-          Fechar banco
+        <button type="button" class="btn-ghost" id="btnCarregarExemplo">
+          Carregar exemplo
         </button>
+
+        <input type="file" id="sqlDatabaseUploader" accept=".db,.sqlite,.sqlite3" hidden>
       </div>
-    </section>
+    </header>
 
-    <!-- TELA INÍCIO -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <section id="screen-inicio" class="screen active">
+    <!-- ============================ VISÃO GERAL ============================ -->
 
-      <div class="hero-banner">
-        <h2>Bem-vindo ao Bibliogestão</h2>
+    <section id="screen-overview" class="screen active" data-screen="overview">
+      <div class="empty-panel" id="overview-empty">
+        <div class="empty-state-icon" aria-hidden="true">🗄️</div>
+        <h2>Nenhum banco de dados carregado</h2>
         <p>
-          Sistema inteligente para organização de relatórios,
-          acompanhamento de prazos e notificação ágil via WhatsApp aos alunos.
+          Importe o arquivo <strong>sisbac_test.db</strong> para reconhecer
+          automaticamente o acervo, os alunos e os empréstimos da biblioteca.
         </p>
-      </div>
-
-      <div class="stats-grid">
-
-        <div class="stat-card" onclick="goToScreenByName('screen-cadastros')">
-          <div>
-            <h4>Total Cadastros</h4>
-            <div class="value" id="kpi-total">0</div>
-          </div>
-          <div class="stat-icon-wrapper"
-            style="background:#eff6ff; color:var(--primary-blue);">
-            👤
-          </div>
-        </div>
-
-        <div class="stat-card" onclick="goToScreenByName('screen-emprestimos')">
-          <div>
-            <h4>Empréstimos</h4>
-            <div class="value" id="kpi-loans">0</div>
-          </div>
-          <div class="stat-icon-wrapper"
-            style="background:var(--accent-yellow-light); color:#854d0e;">
-            📖
-          </div>
-        </div>
-
-        <div class="stat-card" onclick="goToScreenByName('screen-pendencias')">
-          <div>
-            <h4>Pendências em Atraso</h4>
-            <div class="value" id="kpi-pending"
-              style="color:var(--danger);">0</div>
-          </div>
-          <div class="stat-icon-wrapper"
-            style="background:var(--danger-bg); color:var(--danger);">
-            ⚠️
-          </div>
-        </div>
-
-      </div>
-
-      <div class="quick-actions">
-
-        <div class="action-box">
-          <h3>⚡ Acesso Rápido às Pendências</h3>
-          <p>
-            Consulte alunos com prazo de devolução expirado
-            e envie mensagens de cobrança.
-          </p>
-          <button class="nav-item active"
-            style="justify-content:center; width:auto;"
-            onclick="goToScreenByName('screen-pendencias')">
-            Ir para Tela de Pendências →
+        <div class="empty-actions">
+          <button type="button" class="btn-primary" data-action="open-db">
+            Importar banco de dados
+          </button>
+          <button type="button" class="btn-ghost" data-action="load-sample">
+            Carregar banco de exemplo
           </button>
         </div>
+      </div>
 
-        <div class="action-box">
-          <h3>📋 Base de Alunos & Livros</h3>
-          <p>
-            Navegue entre os registros dos estudantes
-            e os títulos atualmente em circulação.
-          </p>
-          <button class="nav-item"
-            style="border:1px solid var(--border); justify-content:center; width:auto;"
-            onclick="goToScreenByName('screen-cadastros')">
-            Ver Todos os Cadastros →
-          </button>
+      <div id="overview-content" class="stack" hidden>
+        <div class="kpi-grid">
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Livros no acervo</span>
+              <span class="kpi-icon tone-blue" aria-hidden="true">📚</span>
+            </div>
+            <strong class="kpi-value" id="kpi-books">0</strong>
+            <small class="kpi-note" id="kpi-books-note">Itens cadastrados</small>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Alunos</span>
+              <span class="kpi-icon tone-green" aria-hidden="true">👥</span>
+            </div>
+            <strong class="kpi-value" id="kpi-readers">0</strong>
+            <small class="kpi-note" id="kpi-readers-note">Leitores cadastrados</small>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Empréstimos ativos</span>
+              <span class="kpi-icon tone-amber" aria-hidden="true">📖</span>
+            </div>
+            <strong class="kpi-value" id="kpi-active-loans">0</strong>
+            <small class="kpi-note" id="kpi-active-loans-note">Livros em circulação</small>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Em atraso</span>
+              <span class="kpi-icon tone-red" aria-hidden="true">⚠️</span>
+            </div>
+            <strong class="kpi-value" id="kpi-overdue">0</strong>
+            <small class="kpi-note" id="kpi-overdue-note">Devoluções vencidas</small>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Devolvidos</span>
+              <span class="kpi-icon tone-slate" aria-hidden="true">✅</span>
+            </div>
+            <strong class="kpi-value" id="kpi-returned">0</strong>
+            <small class="kpi-note" id="kpi-returned-note">Empréstimos concluídos</small>
+          </article>
         </div>
 
+        <div class="overview-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Empréstimos recentes</h2>
+                <p>Últimas movimentações registradas no banco.</p>
+              </div>
+              <button type="button" class="link-button" data-screen-target="loans">
+                Ver todos →
+              </button>
+            </div>
+
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Livro</th>
+                    <th>Aluno</th>
+                    <th>Devolução prevista</th>
+                    <th>Situação</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-loans-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="stack">
+            <section class="alert-panel alert-warning" id="overview-alert">
+              <div class="alert-icon" aria-hidden="true">⚠️</div>
+              <div>
+                <h3 id="overview-alert-title">Nenhuma pendência</h3>
+                <p id="overview-alert-text">Não há devoluções em atraso.</p>
+              </div>
+              <button type="button" class="link-button" data-screen-target="pending">
+                Ver pendências
+              </button>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Situação dos empréstimos</h2>
+                  <p>Distribuição de todos os registros.</p>
+                </div>
+              </div>
+              <div class="bar-list" id="overview-status-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Origem do acervo</h2>
+                  <p>Como os títulos foram incorporados.</p>
+                </div>
+              </div>
+              <div class="bar-list" id="overview-origin-list"></div>
+            </section>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- TELA PENDÊNCIAS -->
+    <!-- ============================ ACERVO ============================ -->
 
-    <section id="screen-pendencias" class="screen">
-      <div class="card-panel">
-        <div class="table-container">
+    <section id="screen-books" class="screen" data-screen="books">
+      <div class="screen-toolbar">
+        <div class="field field-grow">
+          <label for="book-search">Buscar no acervo</label>
+          <input type="search" id="book-search" placeholder="Título, autor, editora ou tombo">
+        </div>
+
+        <div class="field">
+          <label for="book-status-filter">Situação</label>
+          <select id="book-status-filter">
+            <option value="">Todas</option>
+            <option value="available">Disponíveis</option>
+            <option value="borrowed">Emprestados</option>
+            <option value="discarded">Baixados</option>
+            <option value="reserved">Reservados</option>
+            <option value="maintenance">Em manutenção</option>
+            <option value="unknown">Não informados</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="book-sort">Ordenar por</label>
+          <select id="book-sort">
+            <option value="title">Título (A–Z)</option>
+            <option value="author">Autor (A–Z)</option>
+            <option value="acquiredAt">Data de aquisição</option>
+            <option value="code">Tombo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="result-bar">
+        <p id="book-count">Nenhum livro carregado.</p>
+        <button type="button" class="link-button" data-action="clear-book-filters">
+          Limpar filtros
+        </button>
+      </div>
+
+      <div class="panel table-panel">
+        <div class="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Nome Completo</th>
-                <th>Série / Turma</th>
-                <th>Telefone</th>
-                <th>Livro Pendente</th>
-                <th>Tempo do Fim do Empréstimo</th>
-                <th style="text-align:right;">Cobrança WhatsApp</th>
+                <th>Tombo</th>
+                <th>Título</th>
+                <th>Autor</th>
+                <th>Editora</th>
+                <th>Origem</th>
+                <th>Aquisição</th>
+                <th>Situação</th>
+                <th>Empréstimo ativo</th>
               </tr>
             </thead>
+            <tbody id="books-body">
+              <tr>
+                <td colspan="8" class="empty-state">
+                  Importe um banco de dados para visualizar o acervo.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-            <tbody id="grid-pendencias">
+    <!-- ============================ ALUNOS ============================ -->
+
+    <section id="screen-readers" class="screen" data-screen="readers">
+      <div class="screen-toolbar">
+        <div class="field field-grow">
+          <label for="reader-search">Buscar aluno</label>
+          <input type="search" id="reader-search" placeholder="Nome, matrícula, turma, e-mail ou telefone">
+        </div>
+
+        <div class="field">
+          <label for="reader-class-filter">Turma</label>
+          <select id="reader-class-filter">
+            <option value="">Todas as turmas</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="reader-status-filter">Situação</label>
+          <select id="reader-status-filter">
+            <option value="">Todas</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="result-bar">
+        <p id="reader-count">Nenhum aluno carregado.</p>
+        <button type="button" class="link-button" data-action="clear-reader-filters">
+          Limpar filtros
+        </button>
+      </div>
+
+      <div class="panel table-panel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Matrícula</th>
+                <th>Nome</th>
+                <th>Turma</th>
+                <th>Contato</th>
+                <th>Situação</th>
+                <th>Empréstimos ativos</th>
+                <th>Pendências</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="readers-body">
+              <tr>
+                <td colspan="8" class="empty-state">
+                  Importe um banco de dados para visualizar os alunos.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ EMPRÉSTIMOS ============================ -->
+
+    <section id="screen-loans" class="screen" data-screen="loans">
+      <div class="chip-row" id="loan-summary"></div>
+
+      <div class="screen-toolbar">
+        <div class="field field-grow">
+          <label for="loan-search">Buscar empréstimo</label>
+          <input type="search" id="loan-search" placeholder="Livro, aluno, matrícula ou tombo">
+        </div>
+
+        <div class="field">
+          <label for="loan-status-filter">Situação</label>
+          <select id="loan-status-filter">
+            <option value="">Todos</option>
+            <option value="active">Em andamento</option>
+            <option value="dueToday">Vence hoje</option>
+            <option value="overdue">Atrasados</option>
+            <option value="returned">Devolvidos</option>
+            <option value="unknown">Sem data</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="result-bar">
+        <p id="loan-count">Nenhum empréstimo carregado.</p>
+        <button type="button" class="link-button" data-action="clear-loan-filters">
+          Limpar filtros
+        </button>
+      </div>
+
+      <div class="panel table-panel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Livro</th>
+                <th>Aluno</th>
+                <th>Turma</th>
+                <th>Bibliotecário</th>
+                <th>Empréstimo</th>
+                <th>Devolução prevista</th>
+                <th>Prazo</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody id="loans-body">
+              <tr>
+                <td colspan="9" class="empty-state">
+                  Importe um banco de dados para visualizar os empréstimos.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ PENDÊNCIAS ============================ -->
+
+    <section id="screen-pending" class="screen" data-screen="pending">
+      <div class="pending-summary">
+        <article class="summary-tile">
+          <span>Pendências</span>
+          <strong id="pending-count">0</strong>
+          <small>Empréstimos atrasados</small>
+        </article>
+
+        <article class="summary-tile">
+          <span>Média de atraso</span>
+          <strong id="pending-average">0 dias</strong>
+          <small>Por empréstimo vencido</small>
+        </article>
+
+        <article class="summary-tile">
+          <span>Alunos envolvidos</span>
+          <strong id="pending-readers">0</strong>
+          <small>Com devolução pendente</small>
+        </article>
+      </div>
+
+      <div class="result-bar">
+        <p id="pending-message">Nenhuma pendência carregada.</p>
+        <span class="legend">Ordenado do maior atraso para o menor</span>
+      </div>
+
+      <div class="panel table-panel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Aluno</th>
+                <th>Turma</th>
+                <th>Telefone</th>
+                <th>Livro</th>
+                <th>Devolução prevista</th>
+                <th>Dias em atraso</th>
+                <th>Bibliotecário</th>
+                <th>Cobrança</th>
+              </tr>
+            </thead>
+            <tbody id="pending-body">
+              <tr>
+                <td colspan="8" class="empty-state">
+                  Importe um banco de dados para visualizar as pendências.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ BIBLIOTECÁRIOS ============================ -->
+
+    <section id="screen-librarians" class="screen" data-screen="librarians">
+      <div class="screen-toolbar">
+        <div class="field field-grow">
+          <label for="librarian-search">Buscar bibliotecário</label>
+          <input type="search" id="librarian-search" placeholder="Nome, matrícula ou login">
+        </div>
+      </div>
+
+      <div class="result-bar">
+        <p id="librarian-count">Nenhum bibliotecário carregado.</p>
+        <button type="button" class="link-button" data-action="clear-librarian-filters">
+          Limpar filtros
+        </button>
+      </div>
+
+      <div class="panel table-panel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Matrícula</th>
+                <th>Nome</th>
+                <th>Login</th>
+                <th>Telefone</th>
+                <th>Empréstimos registrados</th>
+                <th>Participação</th>
+              </tr>
+            </thead>
+            <tbody id="librarians-body">
               <tr>
                 <td colspan="6" class="empty-state">
-                  <div class="empty-state-icon">📋</div>
-                  Importe um documento para listar as pendências.
+                  Importe um banco de dados para visualizar os bibliotecários.
                 </td>
               </tr>
             </tbody>
@@ -229,67 +505,207 @@
       </div>
     </section>
 
-    <!-- TELA CADASTROS -->
+    <!-- ============================ RELATÓRIOS ============================ -->
 
-    <section id="screen-cadastros" class="screen">
-      <div class="card-panel">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Nome Completo</th>
-                <th>Série / Turma</th>
-                <th>E-mail</th>
-                <th>Telefone</th>
-                <th>Endereço</th>
-              </tr>
-            </thead>
+    <section id="screen-reports" class="screen" data-screen="reports">
+      <div class="empty-panel" id="reports-empty">
+        <div class="empty-state-icon" aria-hidden="true">📊</div>
+        <h2>Relatórios indisponíveis</h2>
+        <p>Importe o banco de dados para gerar os relatórios consolidados.</p>
+      </div>
 
-            <tbody id="grid-cadastro">
-              <tr>
-                <td colspan="5" class="empty-state">
-                  <div class="empty-state-icon">📋</div>
-                  Nenhum registro cadastrado. Carregue um arquivo para começar.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <div id="reports-content" class="stack" hidden>
+        <div class="screen-toolbar compact">
+          <div class="field field-grow">
+            <label>Consolidação</label>
+            <p class="field-note">
+              Indicadores calculados a partir dos registros importados.
+            </p>
+          </div>
+          <button type="button" class="btn-primary" id="btnExportarRelatorio">
+            ⬇️ Exportar relatório (CSV)
+          </button>
+        </div>
+
+        <div class="kpi-grid report-kpis">
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Ocupação do acervo</span>
+              <span class="kpi-icon tone-blue" aria-hidden="true">📚</span>
+            </div>
+            <strong class="kpi-value" id="report-occupancy">0%</strong>
+            <small class="kpi-note">Itens com empréstimo ativo</small>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Média por aluno</span>
+              <span class="kpi-icon tone-green" aria-hidden="true">👥</span>
+            </div>
+            <strong class="kpi-value" id="report-average">0</strong>
+            <small class="kpi-note">Empréstimos ativos por aluno</small>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Percentual de atraso</span>
+              <span class="kpi-icon tone-red" aria-hidden="true">⚠️</span>
+            </div>
+            <strong class="kpi-value" id="report-overdue-rate">0%</strong>
+            <small class="kpi-note">Sobre os empréstimos ativos</small>
+          </article>
+        </div>
+
+        <div class="report-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Autores mais presentes</h2>
+                <p>Ranking por quantidade de títulos no acervo.</p>
+              </div>
+            </div>
+            <div class="ranking-list" id="report-authors"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Empréstimos por turma</h2>
+                <p>Total de movimentações registradas.</p>
+              </div>
+            </div>
+            <div class="bar-list" id="report-classes"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Acervo por origem</h2>
+                <p>Distribuição dos títulos incorporados.</p>
+              </div>
+            </div>
+            <div class="bar-list" id="report-origins"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Acervo por situação</h2>
+                <p>Disponibilidade atual dos itens.</p>
+              </div>
+            </div>
+            <div class="bar-list" id="report-status"></div>
+          </section>
         </div>
       </div>
     </section>
 
-    <!-- TELA EMPRÉSTIMOS -->
+    <!-- ============================ BASE DE DADOS ============================ -->
 
-    <section id="screen-emprestimos" class="screen">
-      <div class="card-panel">
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Nome do Livro</th>
-                <th>Nome do Aluno</th>
-                <th>Série / Turma</th>
-                <th>Data de Devolução</th>
-              </tr>
-            </thead>
-
-            <tbody id="grid-emprestimos">
-              <tr>
-                <td colspan="4" class="empty-state">
-                  <div class="empty-state-icon">📖</div>
-                  Nenhum empréstimo ativo no momento.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+    <section id="screen-database" class="screen" data-screen="database">
+      <div class="dropzone" id="db-dropzone" tabindex="0" role="button"
+        aria-label="Selecionar arquivo de banco de dados SQLite">
+        <div class="dropzone-icon" aria-hidden="true">🗄️</div>
+        <h2>Importar banco SQLite</h2>
+        <p>
+          Arraste o arquivo <strong>.db</strong>, <strong>.sqlite</strong> ou
+          <strong>.sqlite3</strong> aqui ou clique para selecionar.
+        </p>
+        <div class="empty-actions">
+          <span class="btn-primary">Selecionar arquivo</span>
+          <button type="button" class="btn-ghost" id="btnExemploBase" data-action="load-sample">
+            Usar sisbac_test.db
+          </button>
         </div>
+      </div>
+
+      <div class="alert-panel alert-info" id="db-status">
+        <div class="alert-icon" aria-hidden="true">💡</div>
+        <div>
+          <h3>Nenhum banco carregado</h3>
+          <p>
+            A aplicação reconhece as tabelas de acervo, alunos, empréstimos e
+            bibliotecários a partir dos nomes das tabelas e das colunas.
+          </p>
+        </div>
+      </div>
+
+      <div id="db-summary" class="stack" hidden>
+        <div class="summary-grid">
+          <article class="summary-tile">
+            <span>Arquivo</span>
+            <strong id="db-file-name">—</strong>
+            <small id="db-file-size">—</small>
+          </article>
+          <article class="summary-tile">
+            <span>Tabelas</span>
+            <strong id="db-table-count">0</strong>
+            <small id="db-row-count">0 registros</small>
+          </article>
+          <article class="summary-tile">
+            <span>Entidades reconhecidas</span>
+            <strong id="db-entity-count">0</strong>
+            <small id="db-integrity">Integridade: —</small>
+          </article>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Estrutura reconhecida</h2>
+              <p>
+                Mapeamento automático das tabelas para as telas da plataforma.
+              </p>
+            </div>
+            <button type="button" class="link-button" data-screen-target="overview">
+              Ir para Visão Geral →
+            </button>
+          </div>
+
+          <div id="schema-result" class="schema-grid"></div>
+          <div id="schema-warnings" class="warning-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Explorar dados brutos</h2>
+              <p>Consulte qualquer tabela do arquivo importado.</p>
+            </div>
+            <button type="button" class="btn-danger-ghost" id="btnFecharBanco">
+              Fechar banco
+            </button>
+          </div>
+
+          <div class="screen-toolbar compact">
+            <div class="field">
+              <label for="selecionarTabela">Tabela</label>
+              <select id="selecionarTabela"></select>
+            </div>
+            <div class="field field-grow">
+              <label for="raw-search">Buscar nos registros</label>
+              <input type="search" id="raw-search" placeholder="Filtrar registros da tabela selecionada">
+            </div>
+          </div>
+
+          <div class="table-scroll raw-table-wrap">
+            <table id="tabelaVisualizacao">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <p id="totalRegistros" class="result-count"></p>
+        </section>
       </div>
     </section>
 
   </main>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
-  <script src="script.js"></script>
-
+  <script src="vendor/sql.js/sql-wasm.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/schema.js"></script>
+  <script src="js/database.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
