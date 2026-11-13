@@ -555,10 +555,175 @@
     }
   }
 
-  // ============================ TELAS (REQUISITOS SEGUINTES) ============================
+  // ============================ TELAS ============================
+
+  function statusPill(status, extra) {
+    const label = extra || status.label;
+    return `<span class="status-pill ${status.tone}">${utils.escapeHtml(
+      label
+    )}</span>`;
+  }
+
+  function renderBarList(container, items, options) {
+    if (!container) return;
+    const settings = options || {};
+
+    if (!items.length) {
+      container.innerHTML = `<p class="muted-empty">${
+        settings.emptyMessage || "Sem dados para exibir."
+      }</p>`;
+      return;
+    }
+
+    const max = Math.max(...items.map(item => item.count), 1);
+    const tones = settings.tones || ["", "is-green", "is-amber", "is-slate"];
+
+    container.innerHTML = items
+      .map((item, index) => {
+        const width = Math.max((item.count / max) * 100, item.count ? 4 : 0);
+        const tone = item.tone || tones[index % tones.length] || "";
+        return `
+          <div class="bar-item">
+            <div class="bar-label">
+              <span>${utils.escapeHtml(item.label)}</span>
+              <strong>${utils.formatNumber(item.count)}</strong>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill ${tone}" style="width:${width}%"></div>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
 
   function renderOverview() {
-    // Implementado no RF-02.
+    const empty = $("#overview-empty");
+    const content = $("#overview-content");
+    if (!empty || !content) return;
+
+    if (!hasAnyData()) {
+      empty.hidden = false;
+      content.hidden = true;
+      return;
+    }
+
+    empty.hidden = true;
+    content.hidden = false;
+
+    const dataset = data();
+    const view = BG.analytics.compute(dataset);
+    const metrics = view.metrics;
+
+    const setText = (selector, value) => {
+      const node = $(selector);
+      if (node) node.textContent = value;
+    };
+
+    setText("#kpi-books", utils.formatNumber(metrics.books));
+    setText(
+      "#kpi-books-note",
+      `${utils.formatNumber(metrics.availableBooks)} disponíveis para empréstimo`
+    );
+    setText("#kpi-readers", utils.formatNumber(metrics.readers));
+    setText(
+      "#kpi-readers-note",
+      `${utils.formatNumber(metrics.activeReaders)} com cadastro ativo`
+    );
+    setText("#kpi-active-loans", utils.formatNumber(metrics.activeLoans));
+    setText(
+      "#kpi-active-loans-note",
+      metrics.dueTodayLoans
+        ? `${metrics.dueTodayLoans} vencem hoje`
+        : "Livros em circulação"
+    );
+    setText("#kpi-overdue", utils.formatNumber(metrics.overdueLoans));
+    setText(
+      "#kpi-overdue-note",
+      `${utils.formatNumber(metrics.readersWithPending)} aluno(s) com pendência`
+    );
+    setText("#kpi-returned", utils.formatNumber(metrics.returnedLoans));
+    setText("#kpi-returned-note", "Empréstimos concluídos");
+
+    const alert = $("#overview-alert");
+    if (alert) {
+      const title = $("#overview-alert-title");
+      const text = $("#overview-alert-text");
+
+      if (metrics.overdueLoans > 0) {
+        alert.className = "alert-panel alert-warning";
+        if (title) {
+          title.textContent = `${utils.formatNumber(
+            metrics.overdueLoans
+          )} devolução(ões) em atraso`;
+        }
+        if (text) {
+          text.textContent = `${utils.formatNumber(
+            metrics.readersWithPending
+          )} aluno(s) precisam ser contatados. Priorize as pendências mais antigas.`;
+        }
+      } else {
+        alert.className = "alert-panel alert-success";
+        if (title) title.textContent = "Nenhuma devolução em atraso";
+        if (text) {
+          text.textContent =
+            "Todas as devoluções estão dentro do prazo. Continue acompanhando os empréstimos que vencem hoje.";
+        }
+      }
+    }
+
+    renderBarList(
+      $("#overview-status-list"),
+      view.statusCounts,
+      {
+        tones: ["", "is-amber", "is-red", "is-green", "is-slate"],
+        emptyMessage: "Nenhum empréstimo registrado."
+      }
+    );
+
+    const origins = utils.groupCount(
+      dataset.books,
+      book => book.origin || "Não informada"
+    );
+    renderBarList($("#overview-origin-list"), origins, {
+      emptyMessage: "Nenhum livro cadastrado."
+    });
+
+    const recentBody = $("#recent-loans-body");
+    if (recentBody) {
+      const recent = view.recentLoans.slice(0, 5);
+      if (!recent.length) {
+        recentBody.innerHTML =
+          '<tr><td colspan="4" class="empty-state">Nenhum empréstimo registrado.</td></tr>';
+      } else {
+        recentBody.innerHTML = recent
+          .map(loan => {
+            const bookSub = loan.bookAuthor
+              ? loan.bookAuthor
+              : loan.bookCode
+                ? `Tombo ${loan.bookCode}`
+                : "Livro não identificado";
+            const readerSub = loan.readerRegistration
+              ? `Matrícula ${loan.readerRegistration}`
+              : "Aluno não identificado";
+            return `
+              <tr>
+                <td>
+                  <span class="cell-title">${utils.escapeHtml(loan.bookTitle)}</span>
+                  <span class="cell-sub">${utils.escapeHtml(bookSub)}</span>
+                </td>
+                <td>
+                  <span class="cell-title">${utils.escapeHtml(loan.readerName)}</span>
+                  <span class="cell-sub">${utils.escapeHtml(readerSub)}</span>
+                </td>
+                <td>${utils.formatDate(loan.dueDate)}</td>
+                <td>${statusPill(loan.status)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+    }
   }
 
   function renderBooks() {
