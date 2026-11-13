@@ -1,5 +1,8 @@
 # Requisitos Funcionais — Bibliogestão
 
+> **Status:** todos os requisitos deste documento estão implementados na
+> versão atual da aplicação.
+
 Documento de referência das funcionalidades que devem ser implementadas na
 plataforma. Cada requisito corresponde a uma tela alimentada pelos dados do
 banco SQLite da biblioteca.
@@ -51,23 +54,23 @@ estrutura antes de usar os dados nas demais telas.
 
 **Critérios de aceite:**
 
-- [ ] Selecionar um arquivo `.db`, `.sqlite` ou `.sqlite3` e carregá-lo no
+- [x] Selecionar um arquivo `.db`, `.sqlite` ou `.sqlite3` e carregá-lo no
       navegador usando SQLite em WebAssembly.
-- [ ] Listar as tabelas encontradas, a quantidade de registros e as colunas de
+- [x] Listar as tabelas encontradas, a quantidade de registros e as colunas de
       cada uma.
-- [ ] Identificar automaticamente as entidades **Acervo**, **Alunos**,
+- [x] Identificar automaticamente as entidades **Acervo**, **Alunos**,
       **Empréstimos** e **Bibliotecários**, inclusive quando os nomes das
       tabelas/colunas variarem (ex.: `item`/`livro`, `leitor`/`aluno`,
       `satus`/`status`).
-- [ ] Exibir um resumo do mapeamento: tabela usada, campos reconhecidos e
+- [x] Exibir um resumo do mapeamento: tabela usada, campos reconhecidos e
       campos obrigatórios ausentes.
-- [ ] Exibir aviso quando o arquivo não for um SQLite válido ou não possuir
+- [x] Exibir aviso quando o arquivo não for um SQLite válido ou não possuir
       tabelas reconhecíveis.
-- [ ] Permitir consultar os registros brutos de qualquer tabela do arquivo.
-- [ ] Permitir fechar o banco e limpar os dados da sessão.
-- [ ] Oferecer um botão para carregar o banco de exemplo `sisbac_test.db`
+- [x] Permitir consultar os registros brutos de qualquer tabela do arquivo.
+- [x] Permitir fechar o banco e limpar os dados da sessão.
+- [x] Oferecer um botão para carregar o banco de exemplo `sisbac_test.db`
       quando a aplicação estiver publicada em um servidor web.
-- [ ] Com o banco de exemplo, reconhecer 12 livros, 8 alunos, 12 empréstimos
+- [x] Com o banco de exemplo, reconhecer 12 livros, 8 alunos, 12 empréstimos
       e 3 bibliotecários.
 
 ### RF-02 — Visão Geral
@@ -77,16 +80,16 @@ assim que um banco for importado.
 
 **Critérios de aceite:**
 
-- [ ] Exibir cartões com total de livros, alunos, empréstimos ativos,
+- [x] Exibir cartões com total de livros, alunos, empréstimos ativos,
       empréstimos atrasados e devolvidos.
-- [ ] Exibir a distribuição dos empréstimos por situação.
-- [ ] Exibir os empréstimos mais recentes com livro, aluno, data prevista e
+- [x] Exibir a distribuição dos empréstimos por situação.
+- [x] Exibir os empréstimos mais recentes com livro, aluno, data prevista e
       situação.
-- [ ] Exibir um destaque de alerta com a quantidade de pendências e atalho
+- [x] Exibir um destaque de alerta com a quantidade de pendências e atalho
       para a tela de Pendências.
-- [ ] Exibir a composição do acervo por origem (ex.: doação e compra).
-- [ ] Atualizar todos os indicadores automaticamente após cada importação.
-- [ ] Mostrar estado vazio orientando a importar um banco quando não houver
+- [x] Exibir a composição do acervo por origem (ex.: doação e compra).
+- [x] Atualizar todos os indicadores automaticamente após cada importação.
+- [x] Mostrar estado vazio orientando a importar um banco quando não houver
       dados.
 
 ### RF-03 — Acervo de Livros
@@ -95,16 +98,16 @@ assim que um banco for importado.
 
 **Critérios de aceite:**
 
-- [ ] Listar tombo, título, autor, editora, origem, data de aquisição,
+- [x] Listar tombo, título, autor, editora, origem, data de aquisição,
       situação e vínculo com empréstimo ativo.
-- [ ] Calcular a disponibilidade do item: `Emprestado` quando houver
+- [x] Calcular a disponibilidade do item: `Emprestado` quando houver
       empréstimo ativo, senão refletir a situação cadastrada (`Disponível`,
       `Baixado` etc.).
-- [ ] Permitir busca por título, autor, editora ou tombo.
-- [ ] Permitir filtrar por situação (todos, disponíveis, emprestados,
+- [x] Permitir busca por título, autor, editora ou tombo.
+- [x] Permitir filtrar por situação (todos, disponíveis, emprestados,
       baixados).
-- [ ] Permitir ordenação por título, autor ou data de aquisição.
-- [ ] Exibir contagem de resultados e estado vazio adequado.
+- [x] Permitir ordenação por título, autor ou data de aquisição.
+- [x] Exibir contagem de resultados e estado vazio adequado.
 
 ### RF-04 — Alunos
 
@@ -112,12 +115,12 @@ assim que um banco for importado.
 
 **Critérios de aceite:**
 
-- [ ] Listar matrícula, nome, turma, e-mail, telefone e situação.
-- [ ] Exibir a quantidade de empréstimos ativos e de pendências por aluno.
-- [ ] Permitir busca por nome, matrícula, turma, e-mail ou telefone.
-- [ ] Permitir filtrar por turma e por situação (ativos/inativos).
-- [ ] Exibir contagem de resultados e estado vazio adequado.
-- [ ] Disponibilizar atalho de contato por WhatsApp quando houver telefone.
+- [x] Listar matrícula, nome, turma, e-mail, telefone e situação.
+- [x] Exibir a quantidade de empréstimos ativos e de pendências por aluno.
+- [x] Permitir busca por nome, matrícula, turma, e-mail ou telefone.
+- [x] Permitir filtrar por turma e por situação (ativos/inativos).
+- [x] Exibir contagem de resultados e estado vazio adequado.
+- [x] Disponibilizar atalho de contato por WhatsApp quando houver telefone.
 
 ### RF-05 — Empréstimos
 
@@ -125,14 +128,14 @@ assim que um banco for importado.
 
 **Critérios de aceite:**
 
-- [ ] Listar identificador, livro, aluno, turma, bibliotecário responsável,
+- [x] Listar identificador, livro, aluno, turma, bibliotecário responsável,
       data do empréstimo, data prevista de devolução e situação.
-- [ ] Calcular e exibir os dias em atraso ou os dias restantes para devolução.
-- [ ] Permitir filtrar por situação (todos, em andamento, vencendo hoje,
+- [x] Calcular e exibir os dias em atraso ou os dias restantes para devolução.
+- [x] Permitir filtrar por situação (todos, em andamento, vencendo hoje,
       atrasados, devolvidos).
-- [ ] Permitir busca por livro, aluno, matrícula ou tombo.
-- [ ] Exibir resumo com a contagem de cada situação.
-- [ ] Exibir estado vazio adequado quando não houver empréstimos.
+- [x] Permitir busca por livro, aluno, matrícula ou tombo.
+- [x] Exibir resumo com a contagem de cada situação.
+- [x] Exibir estado vazio adequado quando não houver empréstimos.
 
 ### RF-06 — Pendências
 
@@ -141,15 +144,15 @@ alunos.
 
 **Critérios de aceite:**
 
-- [ ] Listar somente empréstimos não devolvidos com data prevista anterior à
+- [x] Listar somente empréstimos não devolvidos com data prevista anterior à
       data atual.
-- [ ] Exibir nome do aluno, turma, telefone, livro, data prevista, dias em
+- [x] Exibir nome do aluno, turma, telefone, livro, data prevista, dias em
       atraso e bibliotecário responsável.
-- [ ] Ordenar da maior para a menor quantidade de dias em atraso.
-- [ ] Gerar link de WhatsApp com mensagem de cobrança pré-preenchida contendo
+- [x] Ordenar da maior para a menor quantidade de dias em atraso.
+- [x] Gerar link de WhatsApp com mensagem de cobrança pré-preenchida contendo
       nome do aluno, título do livro e data prevista.
-- [ ] Exibir total de pendências e média de dias em atraso.
-- [ ] Exibir estado vazio de conformidade quando não houver atrasos.
+- [x] Exibir total de pendências e média de dias em atraso.
+- [x] Exibir estado vazio de conformidade quando não houver atrasos.
 
 ### RF-07 — Bibliotecários
 
@@ -157,11 +160,11 @@ alunos.
 
 **Critérios de aceite:**
 
-- [ ] Listar matrícula, nome, login e telefone.
-- [ ] Exibir a quantidade de empréstimos registrados por bibliotecário.
-- [ ] Permitir busca por nome, matrícula ou login.
-- [ ] Não exibir senha nem chave interna.
-- [ ] Exibir estado vazio adequado quando a tabela não existir ou estiver
+- [x] Listar matrícula, nome, login e telefone.
+- [x] Exibir a quantidade de empréstimos registrados por bibliotecário.
+- [x] Permitir busca por nome, matrícula ou login.
+- [x] Não exibir senha nem chave interna.
+- [x] Exibir estado vazio adequado quando a tabela não existir ou estiver
       vazia.
 
 ### RF-08 — Relatórios
@@ -171,13 +174,13 @@ circulação.
 
 **Critérios de aceite:**
 
-- [ ] Exibir indicadores gerais: taxa de ocupação do acervo, média de
+- [x] Exibir indicadores gerais: taxa de ocupação do acervo, média de
       empréstimos por aluno e percentual de atrasos.
-- [ ] Exibir ranking de autores com mais títulos no acervo.
-- [ ] Exibir distribuição de empréstimos por turma.
-- [ ] Exibir distribuição do acervo por origem e por situação.
-- [ ] Permitir exportar o relatório consolidado em CSV.
-- [ ] Atualizar os relatórios automaticamente após cada importação.
+- [x] Exibir ranking de autores com mais títulos no acervo.
+- [x] Exibir distribuição de empréstimos por turma.
+- [x] Exibir distribuição do acervo por origem e por situação.
+- [x] Permitir exportar o relatório consolidado em CSV.
+- [x] Atualizar os relatórios automaticamente após cada importação.
 
 ## 4. Fora de escopo nesta versão
 

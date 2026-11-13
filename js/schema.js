@@ -7,7 +7,7 @@
   "use strict";
 
   const BG = (window.BG = window.BG || {});
-  const { normalize, normalizeSearch, cleanText } = BG.utils;
+  const { normalize } = BG.utils;
 
   const ENTITY_DEFINITIONS = {
     books: {
@@ -99,8 +99,8 @@
       fields: {
         registration: {
           label: "Matrícula",
-          names: ["matriculaleitor", "matriculaaluno", "matricula", "mat", "ra", "rm", "registro", "registration", "codigoaluno"],
-          patterns: [/matricul/, /^ra$/, /^rm$/, /registration/]
+          names: ["matriculaleitor", "matriculaaluno", "matricula", "mat", "ra", "rm", "registro", "registration", "codigoaluno", "id"],
+          patterns: [/matricul/, /^ra$/, /^rm$/, /registration/, /^id$/]
         },
         name: {
           label: "Nome",
@@ -154,8 +154,8 @@
       fields: {
         registration: {
           label: "Matrícula",
-          names: ["matriculabib", "matriculabibliotecario", "matricula", "registro", "registration"],
-          patterns: [/matricul/, /registration/]
+          names: ["matriculabib", "matriculabibliotecario", "matricula", "registro", "registration", "id"],
+          patterns: [/matricul/, /registration/, /^id$/]
         },
         name: {
           label: "Nome",
@@ -171,11 +171,6 @@
           label: "Telefone",
           names: ["telefonebib", "telefonebibliotecario", "telefone", "celular", "fone", "phone"],
           patterns: [/telefone/, /celular/, /^fone$/, /phone/]
-        },
-        key: {
-          label: "Chave interna",
-          names: ["chave", "key", "codigochave"],
-          patterns: [/chave/, /^key$/]
         }
       }
     },
@@ -199,37 +194,97 @@
         id: {
           label: "Identificador",
           names: ["idemp", "idemprestimo", "codemprestimo", "codigoemprestimo", "id", "codigo"],
-          patterns: [/^id/, /cod.*emp/]
+          patterns: [/^id(emp|emprestimo)?$/, /cod.*emp/]
         },
         bookCode: {
           label: "Tombo do livro",
-          names: ["codtomb", "codigolivro", "codigotombo", "tombo", "item", "livro", "exemplar", "bookcode", "bookid"],
-          patterns: [/cod.*tomb/, /tomb/, /.*livro.*cod/, /^item$/, /^livro$/]
+          names: [
+            "codtomb",
+            "codigolivro",
+            "codigotombo",
+            "tombo",
+            "item",
+            "livro",
+            "exemplar",
+            "bookcode",
+            "bookid",
+            "idlivro",
+            "livroid",
+            "iditem",
+            "itemid",
+            "idexemplar",
+            "exemplarid"
+          ],
+          patterns: [
+            /cod.*tomb/,
+            /tomb/,
+            /(livro|item|exemplar).*id/,
+            /id.*(livro|item|exemplar)/,
+            /^item$/,
+            /^livro$/
+          ]
         },
         readerRegistration: {
           label: "Matrícula do aluno",
-          names: ["matriculaleitor", "matriculaaluno", "matriculaleitora", "matricula", "leitor", "aluno", "readercode", "readerid"],
-          patterns: [/matricul.*leitor/, /matricul.*aluno/, /^leitor$/, /^aluno$/]
+          names: [
+            "matriculaleitor",
+            "matriculaaluno",
+            "matriculaleitora",
+            "matricula",
+            "leitor",
+            "aluno",
+            "readercode",
+            "readerid",
+            "idaluno",
+            "alunoid",
+            "idleitor",
+            "leitorid"
+          ],
+          patterns: [
+            /matricul.*leitor/,
+            /matricul.*aluno/,
+            /(aluno|leitor).*id/,
+            /id.*(aluno|leitor)/,
+            /^leitor$/,
+            /^aluno$/
+          ]
         },
         librarianRegistration: {
           label: "Matrícula do bibliotecário",
-          names: ["matriculabib", "matriculabibliotecario", "bibliotecario", "bibliotecaria", "funcionario", "librarian"],
-          patterns: [/matricul.*bib/, /bib/, /funcionario/]
+          names: [
+            "matriculabib",
+            "matriculabibliotecario",
+            "bibliotecario",
+            "bibliotecaria",
+            "funcionario",
+            "librarian",
+            "idbibliotecario",
+            "bibliotecarioid",
+            "idfuncionario",
+            "funcionarioid"
+          ],
+          patterns: [
+            /matricul.*bib/,
+            /(bibliotecario|funcionario).*id/,
+            /id.*(bibliotecario|funcionario)/,
+            /bib/,
+            /funcionario/
+          ]
         },
         loanDate: {
           label: "Data do empréstimo",
           names: ["datemp", "dataemp", "dataemprestimo", "dtemprestimo", "dataretirada", "loanDate", "loandate"],
           patterns: [/data.*emp/, /dt.*emp/, /data.*retirada/]
         },
-        dueDate: {
-          label: "Data prevista de devolução",
-          names: ["datdev", "datadevolucao", "dataprevistadevolucao", "dataprevisao", "vencimento", "datavencimento", "duedate"],
-          patterns: [/data.*dev/, /previs/, /vencimento/]
-        },
         returnDate: {
           label: "Data de devolução",
           names: ["datretorno", "dataretorno", "datadevolvido", "datadeentrega", "dataentrega", "datareal", "devolvidoem", "returndate"],
           patterns: [/retorno/, /entrega/, /real/, /devolvido/]
+        },
+        dueDate: {
+          label: "Data prevista de devolução",
+          names: ["datdev", "datadevolucao", "dataprevistadevolucao", "dataprevisao", "vencimento", "datavencimento", "duedate"],
+          patterns: [/data.*dev/, /previs/, /vencimento/]
         }
       }
     }
@@ -398,34 +453,11 @@
     };
   }
 
-  function valueOf(row, fields, field) {
-    const column = fields[field];
-    return column ? row[column] : undefined;
-  }
-
-  /** Resolve colunas duplicadas/maiúsculas ao ler uma linha bruta. */
-  function rowReader(row, table) {
-    const map = new Map();
-    Object.keys(row).forEach(key => {
-      map.set(normalize(key), row[key]);
-    });
-    const columns = table.columns.map(column => ({
-      column,
-      key: normalize(column.name)
-    }));
-
-    return field => {
-      const column = columns.find(item => normalize(item.column.name) === normalize(field));
-      if (!column) return undefined;
-      return map.get(column.key);
-    };
-  }
-
   /**
    * Normaliza uma linha bruta usando o mapeamento, mantendo o registro
    * original em `raw` para a aba de exploração.
    */
-  function pick(row, tableInfo, fields, field) {
+  function pick(row, fields, field) {
     const columnName = fields[field];
     if (!columnName) return "";
     const columnKey = Object.keys(row).find(
@@ -437,8 +469,6 @@
   BG.schema = {
     ENTITY_DEFINITIONS,
     detectSchema,
-    valueOf,
-    rowReader,
     pick,
     tableNameScore
   };

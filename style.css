@@ -1097,6 +1097,54 @@ tbody tr:hover td {
   line-height: 1.45;
 }
 
+.table-inventory {
+  display: grid;
+  gap: 10px;
+}
+
+.inventory-item {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.inventory-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.inventory-head strong {
+  font-size: 13px;
+}
+
+.inventory-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.column-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--slate-soft);
+  color: var(--slate);
+  font-size: 10.8px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.column-chip.is-protected {
+  background: var(--danger-soft);
+  color: var(--danger-dark);
+}
+
 .raw-table-wrap {
   max-height: 520px;
   overflow: auto;

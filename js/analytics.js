@@ -17,13 +17,16 @@
       ...loan,
       index,
       status,
+      bookKey: loan.book?.key || loan.bookCode || "",
       bookTitle: loan.book?.title || (loan.bookCode ? `Tombo ${loan.bookCode}` : "Livro não identificado"),
       bookAuthor: loan.book?.author || "",
       bookCode: loan.book?.code || loan.bookCode || "",
+      readerKey: loan.reader?.key || loan.readerRegistration || loan.readerName || "",
       readerName: loan.reader?.name || (loan.readerRegistration ? `Matrícula ${loan.readerRegistration}` : "Aluno não identificado"),
       readerRegistration: loan.reader?.registration || loan.readerRegistration || "",
       className: loan.reader?.className || "",
       readerPhone: loan.reader?.phone || "",
+      librarianKey: loan.librarian?.key || loan.librarianRegistration || loan.librarianName || "",
       librarianName: loan.librarian?.name || "",
       librarianRegistration: loan.librarian?.registration || loan.librarianRegistration || ""
     };
@@ -69,16 +72,16 @@
 
     const activeByBook = new Map();
     activeLoans.forEach(loan => {
-      if (loan.bookCode) activeByBook.set(loan.bookCode, loan);
+      if (loan.bookKey) activeByBook.set(loan.bookKey, loan);
     });
 
     const activeByReader = new Map();
     const overdueByReader = new Map();
     activeLoans.forEach(loan => {
-      increment(activeByReader, loan.readerRegistration || loan.readerName);
+      increment(activeByReader, loan.readerKey);
     });
     overdueLoans.forEach(loan => {
-      increment(overdueByReader, loan.readerRegistration || loan.readerName);
+      increment(overdueByReader, loan.readerKey);
     });
 
     const availableBooks = dataset.books.filter(

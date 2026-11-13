@@ -344,12 +344,69 @@
     );
 
     renderSchema();
+    renderTableInventory();
     populateTableSelector();
     renderRawTable();
   }
 
-  function renderSchema() {
-    const container = $("#schema-result");
+  function renderTableInventory() {
+    const container = $("#db-table-list");
+    if (!container) return;
+
+    const current = state();
+    if (!current.schema) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = current.tables
+      .map(table => {
+        const entity = Object.values(current.schema.entities).find(
+          item => item.table === table.name
+        );
+        const visibleColumns = table.columns.filter(
+          column => !isSensitiveColumn(column.name)
+        );
+        const hiddenCount = table.columns.length - visibleColumns.length;
+
+        const columns = visibleColumns
+          .map(
+            column =>
+              `<span class="column-chip">${utils.escapeHtml(column.name)}${
+                column.primaryKey ? " · PK" : ""
+              }</span>`
+          )
+          .join("");
+
+        return `
+          <div class="inventory-item">
+            <div class="inventory-head">
+              <strong>${utils.escapeHtml(table.name)}</strong>
+              <span class="pill">${utils.escapeHtml(table.type)}</span>
+              <span class="pill">${utils.formatNumber(
+                table.rowCount
+              )} registro(s)</span>
+              ${
+                entity
+                  ? `<span class="pill is-ok">${utils.escapeHtml(entity.label)}</span>`
+                  : '<span class="pill is-warn">não mapeada</span>'
+              }
+            </div>
+            <div class="inventory-columns">
+              ${columns}
+              ${
+                hiddenCount
+                  ? `<span class="column-chip is-protected">+${hiddenCount} coluna(s) protegida(s)</span>`
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function renderSchema() {    const container = $("#schema-result");
     const warningsContainer = $("#schema-warnings");
     if (!container || !warningsContainer) return;
 
@@ -516,7 +573,9 @@
     const headerRow = document.createElement("tr");
     tableInfo.columns.forEach(column => {
       const th = document.createElement("th");
-      th.textContent = column.name;
+      th.textContent = isSensitiveColumn(column.name)
+        ? "Coluna protegida"
+        : column.name;
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -770,7 +829,7 @@
     const sort = $("#book-sort")?.value || "title";
 
     const decorated = dataset.books.map(book => {
-      const activeLoan = view.activeByBook.get(book.code) || null;
+      const activeLoan = view.activeByBook.get(book.key) || null;
       return {
         ...book,
         activeLoan,
@@ -916,25 +975,22 @@
     const classFilter = classSelect?.value || "";
     const statusFilter = $("#reader-status-filter")?.value || "";
 
-    const decorated = dataset.readers.map(reader => {
-      const key = reader.registration || reader.name;
-      return {
-        ...reader,
-        activeLoans: view.activeByReader.get(key) || 0,
-        pendingLoans: view.overdueByReader.get(key) || 0,
-        isActive: utils.readerIsActive(reader.status),
-        searchText: utils.normalizeSearch(
-          [
-            reader.registration,
-            reader.name,
-            reader.className,
-            reader.email,
-            reader.phone,
-            reader.gender
-          ].join(" ")
-        )
-      };
-    });
+    const decorated = dataset.readers.map(reader => ({
+      ...reader,
+      activeLoans: view.activeByReader.get(reader.key) || 0,
+      pendingLoans: view.overdueByReader.get(reader.key) || 0,
+      isActive: utils.readerIsActive(reader.status),
+      searchText: utils.normalizeSearch(
+        [
+          reader.registration,
+          reader.name,
+          reader.className,
+          reader.email,
+          reader.phone,
+          reader.gender
+        ].join(" ")
+      )
+    }));
 
     const filtered = decorated.filter(reader => {
       if (search && !reader.searchText.includes(search)) return false;
@@ -1309,26 +1365,25 @@
 
     const loanCounts = new Map();
     view.loans.forEach(loan => {
-      const key = loan.librarianRegistration || loan.librarianName;
-      if (!key) return;
-      loanCounts.set(key, (loanCounts.get(key) || 0) + 1);
+      if (!loan.librarianKey) return;
+      loanCounts.set(
+        loan.librarianKey,
+        (loanCounts.get(loan.librarianKey) || 0) + 1
+      );
     });
 
-    const decorated = dataset.librarians.map(librarian => {
-      const key = librarian.registration || librarian.name;
-      return {
-        ...librarian,
-        loanCount: loanCounts.get(key) || 0,
-        searchText: utils.normalizeSearch(
-          [
-            librarian.registration,
-            librarian.name,
-            librarian.login,
-            librarian.phone
-          ].join(" ")
-        )
-      };
-    });
+    const decorated = dataset.librarians.map(librarian => ({
+      ...librarian,
+      loanCount: loanCounts.get(librarian.key) || 0,
+      searchText: utils.normalizeSearch(
+        [
+          librarian.registration,
+          librarian.name,
+          librarian.login,
+          librarian.phone
+        ].join(" ")
+      )
+    }));
 
     const filtered = decorated
       .filter(librarian => {
@@ -1434,7 +1489,7 @@
     const statuses = utils.groupCount(dataset.books, book =>
       utils.itemStatusLabel(
         book.status,
-        Boolean(view.activeByBook.get(book.code))
+        Boolean(view.activeByBook.get(book.key))
       )
     );
 

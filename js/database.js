@@ -138,6 +138,34 @@
     return tables;
   }
 
+  function readColumn(row, columnName) {
+    if (!columnName) return undefined;
+    const key = Object.keys(row).find(
+      item => item.toLowerCase() === String(columnName).toLowerCase()
+    );
+    return key === undefined ? undefined : row[key];
+  }
+
+  function primaryKeyOf(row, table) {
+    if (!table) return "";
+    const primary = table.columns.find(column => column.primaryKey);
+    if (!primary) return "";
+    return cleanText(readColumn(row, primary.name));
+  }
+
+  function indexByKeys(items, selector) {
+    const map = new Map();
+    items.forEach(item => {
+      selector(item)
+        .map(key => cleanText(key))
+        .filter(Boolean)
+        .forEach(key => {
+          if (!map.has(key)) map.set(key, item);
+        });
+    });
+    return map;
+  }
+
   function buildDataset(schema, tables) {
     const data = emptyData();
     const rowsFor = entityKey => {
@@ -146,23 +174,30 @@
       const table = tables.find(item => item.name === entity.table);
       return table ? table.rows : [];
     };
+    const tableFor = entityKey => {
+      const entity = schema.entities[entityKey];
+      if (!entity) return null;
+      return tables.find(item => item.name === entity.table) || null;
+    };
 
     const bookEntity = schema.entities.books;
     if (bookEntity) {
+      const bookTable = tableFor("books");
       data.books = rowsFor("books").map((row, index) => {
-        const code = cleanText(pick(row, null, bookEntity.fields, "code"));
+        const code = cleanText(pick(row, bookEntity.fields, "code"));
         return {
-          key: `book:${code || index}`,
+          key: `book:${code || primaryKeyOf(row, bookTable) || index}`,
           code,
-          title: cleanText(pick(row, null, bookEntity.fields, "title")) || "Sem título",
-          author: cleanText(pick(row, null, bookEntity.fields, "author")),
-          publisher: cleanText(pick(row, null, bookEntity.fields, "publisher")),
-          origin: cleanText(pick(row, null, bookEntity.fields, "origin")),
-          acquiredAt: parseDate(pick(row, null, bookEntity.fields, "acquiredAt")),
-          acquiredAtRaw: cleanText(pick(row, null, bookEntity.fields, "acquiredAt")),
-          status: cleanText(pick(row, null, bookEntity.fields, "status")),
-          category: cleanText(pick(row, null, bookEntity.fields, "category")),
-          year: cleanText(pick(row, null, bookEntity.fields, "year")),
+          pk: primaryKeyOf(row, bookTable),
+          title: cleanText(pick(row, bookEntity.fields, "title")) || "Sem título",
+          author: cleanText(pick(row, bookEntity.fields, "author")),
+          publisher: cleanText(pick(row, bookEntity.fields, "publisher")),
+          origin: cleanText(pick(row, bookEntity.fields, "origin")),
+          acquiredAt: parseDate(pick(row, bookEntity.fields, "acquiredAt")),
+          acquiredAtRaw: cleanText(pick(row, bookEntity.fields, "acquiredAt")),
+          status: cleanText(pick(row, bookEntity.fields, "status")),
+          category: cleanText(pick(row, bookEntity.fields, "category")),
+          year: cleanText(pick(row, bookEntity.fields, "year")),
           raw: row
         };
       });
@@ -170,19 +205,21 @@
 
     const readerEntity = schema.entities.readers;
     if (readerEntity) {
+      const readerTable = tableFor("readers");
       data.readers = rowsFor("readers").map((row, index) => {
         const registration = cleanText(
-          pick(row, null, readerEntity.fields, "registration")
+          pick(row, readerEntity.fields, "registration")
         );
         return {
-          key: `reader:${registration || index}`,
+          key: `reader:${registration || primaryKeyOf(row, readerTable) || index}`,
           registration,
-          name: cleanText(pick(row, null, readerEntity.fields, "name")) || "Sem nome",
-          email: cleanText(pick(row, null, readerEntity.fields, "email")),
-          gender: cleanText(pick(row, null, readerEntity.fields, "gender")),
-          status: cleanText(pick(row, null, readerEntity.fields, "status")),
-          className: cleanText(pick(row, null, readerEntity.fields, "className")),
-          phone: cleanText(pick(row, null, readerEntity.fields, "phone")),
+          pk: primaryKeyOf(row, readerTable),
+          name: cleanText(pick(row, readerEntity.fields, "name")) || "Sem nome",
+          email: cleanText(pick(row, readerEntity.fields, "email")),
+          gender: cleanText(pick(row, readerEntity.fields, "gender")),
+          status: cleanText(pick(row, readerEntity.fields, "status")),
+          className: cleanText(pick(row, readerEntity.fields, "className")),
+          phone: cleanText(pick(row, readerEntity.fields, "phone")),
           raw: row
         };
       });
@@ -190,17 +227,18 @@
 
     const librarianEntity = schema.entities.librarians;
     if (librarianEntity) {
+      const librarianTable = tableFor("librarians");
       data.librarians = rowsFor("librarians").map((row, index) => {
         const registration = cleanText(
-          pick(row, null, librarianEntity.fields, "registration")
+          pick(row, librarianEntity.fields, "registration")
         );
         return {
-          key: `librarian:${registration || index}`,
+          key: `librarian:${registration || primaryKeyOf(row, librarianTable) || index}`,
           registration,
-          name: cleanText(pick(row, null, librarianEntity.fields, "name")) || "Sem nome",
-          login: cleanText(pick(row, null, librarianEntity.fields, "login")),
-          phone: cleanText(pick(row, null, librarianEntity.fields, "phone")),
-          keyCode: cleanText(pick(row, null, librarianEntity.fields, "key")),
+          pk: primaryKeyOf(row, librarianTable),
+          name: cleanText(pick(row, librarianEntity.fields, "name")) || "Sem nome",
+          login: cleanText(pick(row, librarianEntity.fields, "login")),
+          phone: cleanText(pick(row, librarianEntity.fields, "phone")),
           raw: row
         };
       });
@@ -209,19 +247,19 @@
     const loanEntity = schema.entities.loans;
     if (loanEntity) {
       data.loans = rowsFor("loans").map((row, index) => {
-        const id = cleanText(pick(row, null, loanEntity.fields, "id"));
+        const id = cleanText(pick(row, loanEntity.fields, "id"));
         return {
           key: `loan:${id || index}`,
           id: id || String(index + 1),
-          loanDate: parseDate(pick(row, null, loanEntity.fields, "loanDate")),
-          dueDate: parseDate(pick(row, null, loanEntity.fields, "dueDate")),
-          returnDate: parseDate(pick(row, null, loanEntity.fields, "returnDate")),
-          bookCode: cleanText(pick(row, null, loanEntity.fields, "bookCode")),
+          loanDate: parseDate(pick(row, loanEntity.fields, "loanDate")),
+          dueDate: parseDate(pick(row, loanEntity.fields, "dueDate")),
+          returnDate: parseDate(pick(row, loanEntity.fields, "returnDate")),
+          bookCode: cleanText(pick(row, loanEntity.fields, "bookCode")),
           readerRegistration: cleanText(
-            pick(row, null, loanEntity.fields, "readerRegistration")
+            pick(row, loanEntity.fields, "readerRegistration")
           ),
           librarianRegistration: cleanText(
-            pick(row, null, loanEntity.fields, "librarianRegistration")
+            pick(row, loanEntity.fields, "librarianRegistration")
           ),
           book: null,
           reader: null,
@@ -231,30 +269,21 @@
       });
     }
 
-    const booksByCode = new Map();
-    data.books.forEach(book => {
-      if (book.code && !booksByCode.has(book.code)) booksByCode.set(book.code, book);
-    });
-
-    const readersByRegistration = new Map();
-    data.readers.forEach(reader => {
-      if (reader.registration && !readersByRegistration.has(reader.registration)) {
-        readersByRegistration.set(reader.registration, reader);
-      }
-    });
-
-    const librariansByRegistration = new Map();
-    data.librarians.forEach(librarian => {
-      if (librarian.registration && !librariansByRegistration.has(librarian.registration)) {
-        librariansByRegistration.set(librarian.registration, librarian);
-      }
-    });
+    const booksByKey = indexByKeys(data.books, book => [book.code, book.pk]);
+    const readersByKey = indexByKeys(data.readers, reader => [
+      reader.registration,
+      reader.pk
+    ]);
+    const librariansByKey = indexByKeys(data.librarians, librarian => [
+      librarian.registration,
+      librarian.pk
+    ]);
 
     data.loans.forEach(loan => {
-      loan.book = booksByCode.get(loan.bookCode) || null;
-      loan.reader = readersByRegistration.get(loan.readerRegistration) || null;
+      loan.book = booksByKey.get(loan.bookCode) || null;
+      loan.reader = readersByKey.get(loan.readerRegistration) || null;
       loan.librarian =
-        librariansByRegistration.get(loan.librarianRegistration) || null;
+        librariansByKey.get(loan.librarianRegistration) || null;
     });
 
     return data;
@@ -288,7 +317,9 @@
       tables = inspectTables(newDatabase);
     } catch (error) {
       newDatabase.close();
-      throw new Error("Não foi possível ler as tabelas do banco de dados.");
+      throw new Error(
+        "O arquivo não parece ser um banco SQLite válido. Selecione um arquivo .db, .sqlite ou .sqlite3."
+      );
     }
 
     if (!tables.length) {
