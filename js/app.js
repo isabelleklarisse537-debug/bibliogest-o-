@@ -726,8 +726,144 @@
     }
   }
 
+  function bookStatusView(book, activeLoan) {
+    const key = utils.itemStatusKey(book.status, Boolean(activeLoan));
+    const toneMap = {
+      available: "success",
+      borrowed: "warning",
+      discarded: "neutral",
+      reserved: "info",
+      maintenance: "warning",
+      unknown: "neutral"
+    };
+    return {
+      key,
+      label: utils.itemStatusLabel(book.status, Boolean(activeLoan)),
+      tone: toneMap[key] || "neutral"
+    };
+  }
+
   function renderBooks() {
-    // Implementado no RF-03.
+    const body = $("#books-body");
+    const counter = $("#book-count");
+    if (!body || !counter) return;
+
+    const dataset = data();
+
+    if (!hasAnyData()) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state">Importe um banco de dados para visualizar o acervo.</td></tr>';
+      counter.textContent = "Nenhum livro carregado.";
+      return;
+    }
+
+    if (!dataset.books.length) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state">Nenhum livro foi reconhecido no banco importado.</td></tr>';
+      counter.textContent = "Nenhum livro carregado.";
+      return;
+    }
+
+    const view = BG.analytics.compute(dataset);
+    const search = utils.normalizeSearch($("#book-search")?.value || "");
+    const statusFilter = $("#book-status-filter")?.value || "";
+    const sort = $("#book-sort")?.value || "title";
+
+    const decorated = dataset.books.map(book => {
+      const activeLoan = view.activeByBook.get(book.code) || null;
+      return {
+        ...book,
+        activeLoan,
+        statusView: bookStatusView(book, activeLoan),
+        searchText: utils.normalizeSearch(
+          [
+            book.code,
+            book.title,
+            book.author,
+            book.publisher,
+            book.origin,
+            book.category,
+            book.year
+          ].join(" ")
+        )
+      };
+    });
+
+    const filtered = decorated.filter(book => {
+      if (search && !book.searchText.includes(search)) return false;
+      if (statusFilter && book.statusView.key !== statusFilter) return false;
+      return true;
+    });
+
+    const compareText = (a, b) =>
+      String(a || "").localeCompare(String(b || ""), "pt-BR", {
+        sensitivity: "base"
+      });
+
+    filtered.sort((a, b) => {
+      if (sort === "author") {
+        return compareText(a.author, b.author) || compareText(a.title, b.title);
+      }
+      if (sort === "acquiredAt") {
+        const aTime = a.acquiredAt ? a.acquiredAt.getTime() : -Infinity;
+        const bTime = b.acquiredAt ? b.acquiredAt.getTime() : -Infinity;
+        return bTime - aTime || compareText(a.title, b.title);
+      }
+      if (sort === "code") {
+        const aNumber = Number(a.code);
+        const bNumber = Number(b.code);
+        if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) {
+          return aNumber - bNumber;
+        }
+        return compareText(a.code, b.code);
+      }
+      return compareText(a.title, b.title);
+    });
+
+    counter.textContent = `${utils.formatNumber(filtered.length)} de ${utils.formatNumber(
+      dataset.books.length
+    )} livro(s) exibido(s).`;
+
+    if (!filtered.length) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state">Nenhum livro corresponde aos filtros selecionados.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = filtered
+      .map(book => {
+        const details =
+          book.category || book.year
+            ? `${book.category || ""}${book.category && book.year ? " · " : ""}${
+                book.year || ""
+              }`
+            : "";
+        const activeLoan = book.activeLoan
+          ? `
+            <span class="cell-title">${utils.escapeHtml(book.activeLoan.readerName)}</span>
+            <span class="cell-sub">desde ${utils.formatDate(
+              book.activeLoan.loanDate
+            )} · devolver até ${utils.formatDate(book.activeLoan.dueDate)}</span>
+          `
+          : '<span class="cell-sub">—</span>';
+
+        return `
+          <tr>
+            <td><strong>${utils.escapeHtml(book.code || "—")}</strong></td>
+            <td>
+              <span class="cell-title">${utils.escapeHtml(book.title)}</span>
+              ${details ? `<span class="cell-sub">${utils.escapeHtml(details)}</span>` : ""}
+            </td>
+            <td>${utils.escapeHtml(book.author || "—")}</td>
+            <td>${utils.escapeHtml(book.publisher || "—")}</td>
+            <td>${utils.escapeHtml(book.origin || "—")}</td>
+            <td>${utils.formatDate(book.acquiredAt)}</td>
+            <td>${statusPill(book.statusView)}</td>
+            <td>${activeLoan}</td>
+          </tr>
+        `;
+      })
+      .join("");
   }
 
   function renderReaders() {
