@@ -1386,8 +1386,192 @@
       .join("");
   }
 
+  function renderRanking(container, items, emptyMessage) {
+    if (!container) return;
+
+    if (!items.length) {
+      container.innerHTML = `<p class="muted-empty">${utils.escapeHtml(
+        emptyMessage || "Sem dados para exibir."
+      )}</p>`;
+      return;
+    }
+
+    const max = Math.max(...items.map(item => item.count), 1);
+    container.innerHTML = items
+      .map((item, index) => {
+        const width = Math.max((item.count / max) * 100, item.count ? 4 : 0);
+        return `
+          <div class="ranking-item">
+            <span class="ranking-position">${index + 1}</span>
+            <div class="ranking-body">
+              <div class="ranking-name">
+                <span>${utils.escapeHtml(item.label)}</span>
+                <strong>${utils.formatNumber(item.count)}</strong>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:${width}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function reportBreakdown(dataset, view) {
+    const authors = utils.groupCount(
+      dataset.books,
+      book => book.author || "Não informado"
+    );
+    const classes = utils.groupCount(
+      view.loans,
+      loan => loan.className || "Sem turma"
+    );
+    const origins = utils.groupCount(
+      dataset.books,
+      book => book.origin || "Não informada"
+    );
+    const statuses = utils.groupCount(dataset.books, book =>
+      utils.itemStatusLabel(
+        book.status,
+        Boolean(view.activeByBook.get(book.code))
+      )
+    );
+
+    return { authors, classes, origins, statuses };
+  }
+
   function renderReports() {
-    // Implementado no RF-08.
+    const empty = $("#reports-empty");
+    const content = $("#reports-content");
+    if (!empty || !content) return;
+
+    if (!hasAnyData()) {
+      empty.hidden = false;
+      content.hidden = true;
+      return;
+    }
+
+    empty.hidden = true;
+    content.hidden = false;
+
+    const dataset = data();
+    const view = BG.analytics.compute(dataset);
+    const metrics = view.metrics;
+    const breakdown = reportBreakdown(dataset, view);
+
+    const occupancy = metrics.books
+      ? (view.activeByBook.size / metrics.books) * 100
+      : 0;
+    const averageLoans = metrics.readers
+      ? metrics.activeLoans / metrics.readers
+      : 0;
+    const overdueRate = metrics.activeLoans
+      ? (metrics.overdueLoans / metrics.activeLoans) * 100
+      : 0;
+
+    const setText = (selector, value) => {
+      const node = $(selector);
+      if (node) node.textContent = value;
+    };
+
+    setText("#report-occupancy", utils.formatPercent(occupancy));
+    setText(
+      "#report-average",
+      new Intl.NumberFormat("pt-BR", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1
+      }).format(averageLoans)
+    );
+    setText("#report-overdue-rate", utils.formatPercent(overdueRate));
+
+    renderRanking(
+      $("#report-authors"),
+      breakdown.authors.slice(0, 10),
+      "Nenhum autor identificado no acervo."
+    );
+
+    renderBarList($("#report-classes"), breakdown.classes, {
+      tones: ["", "is-green", "is-amber", "is-slate"],
+      emptyMessage: "Nenhum empréstimo registrado."
+    });
+
+    renderBarList($("#report-origins"), breakdown.origins, {
+      tones: ["", "is-green", "is-amber", "is-slate"],
+      emptyMessage: "Nenhum livro cadastrado."
+    });
+
+    renderBarList($("#report-status"), breakdown.statuses, {
+      tones: ["is-green", "is-amber", "is-slate", "is-red"],
+      emptyMessage: "Nenhum livro cadastrado."
+    });
+  }
+
+  function exportReportCsv() {
+    if (!hasAnyData()) {
+      showToast("Importe um banco de dados para exportar o relatório.", "error");
+      return;
+    }
+
+    const dataset = data();
+    const view = BG.analytics.compute(dataset);
+    const metrics = view.metrics;
+    const breakdown = reportBreakdown(dataset, view);
+
+    const occupancy = metrics.books
+      ? (view.activeByBook.size / metrics.books) * 100
+      : 0;
+    const averageLoans = metrics.readers
+      ? metrics.activeLoans / metrics.readers
+      : 0;
+    const overdueRate = metrics.activeLoans
+      ? (metrics.overdueLoans / metrics.activeLoans) * 100
+      : 0;
+
+    const rows = [
+      ["Indicador", "Livros no acervo", metrics.books],
+      ["Indicador", "Alunos cadastrados", metrics.readers],
+      ["Indicador", "Bibliotecários", metrics.librarians],
+      ["Indicador", "Empréstimos registrados", metrics.loans],
+      ["Indicador", "Empréstimos ativos", metrics.activeLoans],
+      ["Indicador", "Empréstimos em atraso", metrics.overdueLoans],
+      ["Indicador", "Empréstimos devolvidos", metrics.returnedLoans],
+      ["Indicador", "Ocupação do acervo", utils.formatPercent(occupancy)],
+      [
+        "Indicador",
+        "Média de empréstimos ativos por aluno",
+        new Intl.NumberFormat("pt-BR", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format(averageLoans)
+      ],
+      ["Indicador", "Percentual de atraso", utils.formatPercent(overdueRate)]
+    ];
+
+    breakdown.authors.forEach(item => {
+      rows.push(["Ranking de autores", item.label, item.count]);
+    });
+    breakdown.classes.forEach(item => {
+      rows.push(["Empréstimos por turma", item.label, item.count]);
+    });
+    breakdown.origins.forEach(item => {
+      rows.push(["Acervo por origem", item.label, item.count]);
+    });
+    breakdown.statuses.forEach(item => {
+      rows.push(["Acervo por situação", item.label, item.count]);
+    });
+
+    const today = utils.today();
+    const stamp = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    utils.downloadCsv(
+      `relatorio-bibliogestao-${stamp}.csv`,
+      ["Categoria", "Item", "Valor"],
+      rows
+    );
+    showToast("Relatório exportado em CSV.", "success");
   }
 
   // ============================ FILTROS ============================
@@ -1523,6 +1707,7 @@
     );
 
     $("#btnFecharBanco")?.addEventListener("click", closeDatabase);
+    $("#btnExportarRelatorio")?.addEventListener("click", exportReportCsv);
 
     $("#book-search")?.addEventListener("input", utils.debounce(renderBooks, 140));
     $("#book-status-filter")?.addEventListener("change", renderBooks);
