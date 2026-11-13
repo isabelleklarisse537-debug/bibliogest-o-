@@ -1183,7 +1183,103 @@
   }
 
   function renderPending() {
-    // Implementado no RF-06.
+    const body = $("#pending-body");
+    const counter = $("#pending-count");
+    const average = $("#pending-average");
+    const readers = $("#pending-readers");
+    const message = $("#pending-message");
+    if (!body) return;
+
+    const dataset = data();
+    const view = BG.analytics.compute(dataset);
+    const pending = view.pendingLoans;
+
+    const averageDays = pending.length
+      ? pending.reduce((total, loan) => total + loan.status.days, 0) /
+        pending.length
+      : 0;
+
+    if (counter) counter.textContent = utils.formatNumber(pending.length);
+    if (average) {
+      average.textContent = `${new Intl.NumberFormat("pt-BR", {
+        minimumFractionDigits: pending.length ? 1 : 0,
+        maximumFractionDigits: 1
+      }).format(averageDays)} dia(s)`;
+    }
+    if (readers) {
+      readers.textContent = utils.formatNumber(view.metrics.readersWithPending);
+    }
+
+    if (!hasAnyData()) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state">Importe um banco de dados para visualizar as pendências.</td></tr>';
+      if (message) message.textContent = "Nenhuma pendência carregada.";
+      return;
+    }
+
+    if (!pending.length) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="empty-state"><div class="empty-state-icon" aria-hidden="true">✅</div>Nenhuma devolução em atraso. Todo o acervo está em dia.</td></tr>';
+      if (message) {
+        message.textContent = "Nenhuma devolução em atraso no momento.";
+      }
+      return;
+    }
+
+    if (message) {
+      message.textContent = `${utils.formatNumber(
+        pending.length
+      )} empréstimo(s) em atraso. Priorize os contatos mais antigos.`;
+    }
+
+    body.innerHTML = pending
+      .map(loan => {
+        const whatsappMessage = `Olá, ${loan.readerName}! O livro "${loan.bookTitle}" está com devolução prevista para ${utils.formatDate(
+          loan.dueDate
+        )} e consta em atraso há ${utils.formatNumber(
+          loan.status.days
+        )} dia(s). Podemos combinar a devolução?`;
+        const whatsapp = utils.whatsappLink(loan.readerPhone, whatsappMessage);
+        const bookSub =
+          loan.bookAuthor || (loan.bookCode ? `Tombo ${loan.bookCode}` : "");
+        const readerSub = loan.readerRegistration
+          ? `Matrícula ${loan.readerRegistration}`
+          : "";
+
+        return `
+          <tr>
+            <td>
+              <span class="cell-title">${utils.escapeHtml(loan.readerName)}</span>
+              ${readerSub ? `<span class="cell-sub">${utils.escapeHtml(readerSub)}</span>` : ""}
+            </td>
+            <td>${utils.escapeHtml(loan.className || "—")}</td>
+            <td>${utils.escapeHtml(
+              loan.readerPhone ? utils.formatPhone(loan.readerPhone) : "—"
+            )}</td>
+            <td>
+              <span class="cell-title">${utils.escapeHtml(loan.bookTitle)}</span>
+              ${bookSub ? `<span class="cell-sub">${utils.escapeHtml(bookSub)}</span>` : ""}
+            </td>
+            <td>${utils.formatDate(loan.dueDate)}</td>
+            <td>
+              <span class="status-pill danger">${utils.formatNumber(
+                loan.status.days
+              )} dia(s)</span>
+            </td>
+            <td>${utils.escapeHtml(loan.librarianName || "—")}</td>
+            <td>
+              ${
+                whatsapp
+                  ? `<a class="link-button" href="${utils.escapeHtml(
+                      whatsapp
+                    )}" target="_blank" rel="noopener noreferrer">Cobrar no WhatsApp ↗</a>`
+                  : '<span class="cell-sub">Sem telefone</span>'
+              }
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
   }
 
   function renderLibrarians() {
