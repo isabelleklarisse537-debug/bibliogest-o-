@@ -18,8 +18,9 @@ dados entre as telas de consulta e acompanhamento.
 - Pendências priorizadas por atraso e cobrança com mensagem pré-preenchida no
   WhatsApp.
 - Bibliotecários com volume de empréstimos registrados.
-- Relatórios consolidados com exportação em PDF pela opção **Salvar como
-  PDF** da impressão do navegador.
+- Relatórios separados por tipo — consolidado, turmas, empréstimos,
+  pendências, acervo, alunos e bibliotecários — com exportação em PDF pela
+  opção **Salvar como PDF** da impressão do navegador.
 - Explorador de dados brutos do banco importado.
 
 Os requisitos completos, com critérios de aceite, estão em
@@ -59,12 +60,21 @@ quando a aplicação está sendo servida por HTTP.
 
 1. Importe um banco de dados.
 2. Acesse a tela **Relatórios**.
-3. Clique em **🖨️ Salvar relatório em PDF**.
-4. Na janela de impressão do navegador, escolha **Salvar como PDF** como
+3. Escolha o **Tipo de relatório**:
+   - Consolidado
+   - Turmas
+   - Empréstimos
+   - Pendências
+   - Acervo
+   - Alunos
+   - Bibliotecários
+4. Clique em **🖨️ Salvar relatório em PDF**.
+5. Na janela de impressão do navegador, escolha **Salvar como PDF** como
    destino e confirme.
 
-O relatório é formatado em A4 e inclui o banco de origem, a data de geração,
-os indicadores gerais e as distribuições do acervo e dos empréstimos.
+O relatório é formatado em A4 e inclui o banco de origem, a data de geração e
+os dados do tipo selecionado. O relatório consolidado traz os indicadores
+gerais e as distribuições do acervo e dos empréstimos.
 
 ## Estrutura do banco de referência
 

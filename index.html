@@ -520,7 +520,9 @@
             <span class="report-print-logo" aria-hidden="true">📚</span>
             <div>
               <h1>Bibliogestão</h1>
-              <p>Relatório consolidado do acervo e da circulação</p>
+              <p id="report-print-subtitle">
+                Relatório consolidado do acervo e da circulação
+              </p>
             </div>
           </div>
           <dl class="report-print-meta">
@@ -536,12 +538,24 @@
         </header>
 
         <div class="screen-toolbar compact">
+          <div class="field">
+            <label for="report-type">Tipo de relatório</label>
+            <select id="report-type">
+              <option value="summary">Consolidado</option>
+              <option value="classes">Turmas</option>
+              <option value="loans">Empréstimos</option>
+              <option value="pending">Pendências</option>
+              <option value="books">Acervo</option>
+              <option value="readers">Alunos</option>
+              <option value="librarians">Bibliotecários</option>
+            </select>
+          </div>
           <div class="field field-grow">
             <label>Consolidação</label>
             <p class="field-note">
-              Indicadores calculados a partir dos registros importados. Na
-              janela de impressão, escolha <strong>Salvar como PDF</strong>
-              como destino.
+              Escolha o tipo de relatório e clique em salvar. Na janela de
+              impressão, selecione <strong>Salvar como PDF</strong> como
+              destino.
             </p>
           </div>
           <button type="button" class="btn-primary" id="btnExportarRelatorio">
@@ -549,6 +563,7 @@
           </button>
         </div>
 
+        <div id="report-summary-view" class="stack">
         <div class="kpi-grid report-kpis">
           <article class="kpi-card">
             <div class="kpi-top">
@@ -635,6 +650,31 @@
               </div>
             </div>
             <div class="bar-list" id="report-status"></div>
+          </section>
+        </div>
+        </div>
+
+        <div id="report-detail-view" class="stack" hidden>
+          <section class="panel report-detail-panel">
+            <div class="panel-head">
+              <div>
+                <h2 id="report-detail-title">Relatório</h2>
+                <p id="report-detail-description"></p>
+              </div>
+            </div>
+
+            <div
+              class="summary-grid report-detail-stats"
+              id="report-detail-stats"
+              hidden
+            ></div>
+
+            <div class="table-scroll report-table-wrap">
+              <table class="report-detail-table">
+                <thead id="report-detail-head"></thead>
+                <tbody id="report-detail-body"></tbody>
+              </table>
+            </div>
           </section>
         </div>
 

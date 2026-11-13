@@ -410,6 +410,22 @@ main {
   gap: 18px;
 }
 
+.report-detail-stats {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.report-detail-table {
+  min-width: 900px;
+}
+
+.report-detail-table td {
+  vertical-align: top;
+}
+
+.report-table-wrap {
+  margin-top: 4px;
+}
+
 /* ============================== FORMULÁRIOS ============================== */
 
 .screen-toolbar {
@@ -1471,6 +1487,11 @@ tbody tr:hover td {
     white-space: normal;
   }
 
+  #report-summary-view,
+  #report-detail-view {
+    display: block;
+  }
+
   .report-grid {
     display: block;
   }
@@ -1478,6 +1499,75 @@ tbody tr:hover td {
   .report-grid .panel {
     margin-bottom: 12px;
     break-inside: avoid;
+  }
+
+  .report-detail-panel {
+    padding: 12px 14px;
+    break-inside: auto;
+  }
+
+  .report-detail-stats {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .report-detail-stats .summary-tile {
+    padding: 8px 10px;
+    border: 1px solid var(--border-strong);
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .report-detail-stats .summary-tile span {
+    font-size: 8.5pt;
+  }
+
+  .report-detail-stats .summary-tile strong {
+    font-size: 14pt;
+  }
+
+  .report-detail-stats .summary-tile small {
+    font-size: 8pt;
+  }
+
+  .report-table-wrap {
+    overflow: visible;
+  }
+
+  .report-detail-table {
+    min-width: 0;
+  }
+
+  .report-detail-table thead {
+    display: table-header-group;
+  }
+
+  .report-detail-table th,
+  .report-detail-table td {
+    padding: 4px 5px;
+    font-size: 7.8pt;
+    vertical-align: top;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .report-detail-table thead th {
+    font-size: 7.2pt;
+  }
+
+  .report-detail-table tbody tr {
+    break-inside: avoid;
+  }
+
+  .report-detail-table .status-pill {
+    padding: 2px 5px;
+    font-size: 7.2pt;
+  }
+
+  .report-detail-table .cell-sub {
+    margin-top: 1px;
+    font-size: 7pt;
   }
 
   .panel {

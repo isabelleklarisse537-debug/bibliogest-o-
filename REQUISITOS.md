@@ -179,7 +179,9 @@ circulação.
 - [x] Exibir ranking de autores com mais títulos no acervo.
 - [x] Exibir distribuição de empréstimos por turma.
 - [x] Exibir distribuição do acervo por origem e por situação.
-- [x] Permitir exportar o relatório consolidado em PDF, usando a opção
+- [x] Permitir gerar relatórios separados por turma, empréstimos, pendências,
+      acervo, alunos e bibliotecários.
+- [x] Permitir exportar o relatório selecionado em PDF, usando a opção
       **Salvar como PDF** da impressão do navegador.
 - [x] Atualizar os relatórios automaticamente após cada importação.
 

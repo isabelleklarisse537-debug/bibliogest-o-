@@ -44,6 +44,50 @@
     ]
   };
 
+  const REPORT_TYPES = {
+    summary: {
+      heading: "Relatório consolidado",
+      subtitle: "Relatório consolidado do acervo e da circulação",
+      description:
+        "Indicadores gerais, rankings e distribuições do acervo e dos empréstimos."
+    },
+    classes: {
+      heading: "Relatório de turmas",
+      subtitle: "Relatório de turmas — alunos e circulação",
+      description:
+        "Resumo de alunos, empréstimos ativos, atrasos e devoluções por turma."
+    },
+    loans: {
+      heading: "Relatório de empréstimos",
+      subtitle: "Relatório de empréstimos e prazos de devolução",
+      description:
+        "Lista completa das movimentações registradas, com prazos e situação."
+    },
+    pending: {
+      heading: "Relatório de pendências",
+      subtitle: "Relatório de pendências — devoluções em atraso",
+      description: "Empréstimos vencidos ordenados pelo maior atraso."
+    },
+    books: {
+      heading: "Relatório do acervo",
+      subtitle: "Relatório do acervo — disponibilidade dos itens",
+      description:
+        "Títulos cadastrados, situação e vínculo com empréstimos ativos."
+    },
+    readers: {
+      heading: "Relatório de alunos",
+      subtitle: "Relatório de alunos — cadastro e circulação",
+      description:
+        "Alunos cadastrados, turmas, situação e pendências de devolução."
+    },
+    librarians: {
+      heading: "Relatório de bibliotecários",
+      subtitle: "Relatório de bibliotecários — participação nos empréstimos",
+      description:
+        "Equipe da biblioteca e volume de empréstimos registrados."
+    }
+  };
+
   const SENSITIVE_COLUMN = /(senha|password|passwd|chave|token|secret)/i;
 
   let currentScreen = "overview";
@@ -1496,22 +1540,531 @@
     return { authors, classes, origins, statuses };
   }
 
-  function renderReports() {
-    const empty = $("#reports-empty");
-    const content = $("#reports-content");
-    if (!empty || !content) return;
+  function reportTypeKey() {
+    const select = $("#report-type");
+    return select && REPORT_TYPES[select.value] ? select.value : "summary";
+  }
 
-    if (!hasAnyData()) {
-      empty.hidden = false;
-      content.hidden = true;
+  function setReportView(type) {
+    const info = REPORT_TYPES[type] || REPORT_TYPES.summary;
+    const isSummary = type === "summary";
+    const summaryView = $("#report-summary-view");
+    const detailView = $("#report-detail-view");
+    const printSummary = $(".report-print-summary");
+
+    if (summaryView) summaryView.hidden = !isSummary;
+    if (detailView) detailView.hidden = isSummary;
+    if (printSummary) printSummary.hidden = !isSummary;
+
+    const subtitle = $("#report-print-subtitle");
+    if (subtitle) subtitle.textContent = info.subtitle;
+
+    const title = $("#report-detail-title");
+    if (title) title.textContent = info.heading;
+
+    const description = $("#report-detail-description");
+    if (description) description.textContent = info.description;
+  }
+
+  function renderDetailStats(items) {
+    const container = $("#report-detail-stats");
+    if (!container) return;
+
+    container.hidden = items.length === 0;
+    container.innerHTML = items
+      .map(
+        item => `
+          <article class="summary-tile">
+            <span>${utils.escapeHtml(item.label)}</span>
+            <strong>${utils.escapeHtml(item.value)}</strong>
+            ${item.note ? `<small>${utils.escapeHtml(item.note)}</small>` : ""}
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  function renderDetailTable(columns, rows, emptyMessage) {
+    const head = $("#report-detail-head");
+    const body = $("#report-detail-body");
+    if (!head || !body) return;
+
+    head.innerHTML = `<tr>${columns
+      .map(
+        column =>
+          `<th${column.numeric ? ' class="numeric"' : ""}>${utils.escapeHtml(
+            column.label
+          )}</th>`
+      )
+      .join("")}</tr>`;
+
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="${
+        columns.length
+      }" class="empty-state">${utils.escapeHtml(emptyMessage)}</td></tr>`;
       return;
     }
 
-    empty.hidden = true;
-    content.hidden = false;
+    body.innerHTML = rows
+      .map(
+        row =>
+          `<tr>${row
+            .map(
+              (cell, index) =>
+                `<td${
+                  columns[index]?.numeric ? ' class="numeric"' : ""
+                }>${cell}</td>`
+            )
+            .join("")}</tr>`
+      )
+      .join("");
+  }
 
-    const dataset = data();
-    const view = BG.analytics.compute(dataset);
+  function loanStatusBadge(status) {
+    const tone = ["info", "success", "warning", "danger", "neutral"].includes(
+      status.tone
+    )
+      ? status.tone
+      : "neutral";
+    return `<span class="status-pill ${tone}">${utils.escapeHtml(
+      status.label
+    )}</span>`;
+  }
+
+  function activeLoanForBook(book, view) {
+    return (
+      view.activeByBook.get(book.key) ||
+      view.activeByBook.get(book.code) ||
+      null
+    );
+  }
+
+  function formatDecimal(value) {
+    return new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    }).format(value);
+  }
+
+  function renderClassReport(dataset, view) {
+    const classNames = new Set();
+    dataset.readers.forEach(reader =>
+      classNames.add(reader.className || "Sem turma")
+    );
+    view.loans.forEach(loan => classNames.add(loan.className || "Sem turma"));
+
+    const classes = Array.from(classNames).sort((a, b) =>
+      a.localeCompare(b, "pt-BR")
+    );
+
+    const rows = classes.map(className => {
+      const classLoans = view.loans.filter(
+        loan => (loan.className || "Sem turma") === className
+      );
+      const readers = dataset.readers.filter(
+        reader => (reader.className || "Sem turma") === className
+      );
+      const active = classLoans.filter(loan => !loan.returnDate).length;
+      const overdue = classLoans.filter(
+        loan => loan.status.key === "overdue"
+      ).length;
+      const returned = classLoans.filter(
+        loan => loan.status.key === "returned"
+      ).length;
+
+      return [
+        `<strong>${utils.escapeHtml(className)}</strong>`,
+        utils.formatNumber(readers.length),
+        utils.formatNumber(active),
+        utils.formatNumber(overdue),
+        utils.formatNumber(returned),
+        utils.formatNumber(classLoans.length)
+      ];
+    });
+
+    renderDetailStats([
+      {
+        label: "Turmas",
+        value: utils.formatNumber(classes.length),
+        note: "Identificadas nos cadastros"
+      },
+      {
+        label: "Alunos",
+        value: utils.formatNumber(dataset.readers.length),
+        note: "Vinculados às turmas"
+      },
+      {
+        label: "Empréstimos ativos",
+        value: utils.formatNumber(view.metrics.activeLoans),
+        note: "Em circulação"
+      },
+      {
+        label: "Pendências",
+        value: utils.formatNumber(view.metrics.overdueLoans),
+        note: "Devoluções em atraso"
+      }
+    ]);
+
+    renderDetailTable(
+      [
+        { label: "Turma" },
+        { label: "Alunos", numeric: true },
+        { label: "Ativos", numeric: true },
+        { label: "Atrasados", numeric: true },
+        { label: "Devolvidos", numeric: true },
+        { label: "Total", numeric: true }
+      ],
+      rows,
+      "Nenhuma turma identificada no banco importado."
+    );
+  }
+
+  function renderLoanReport(view) {
+    const rows = view.recentLoans.map(loan => [
+      utils.escapeHtml(loan.id),
+      `<strong>${utils.escapeHtml(loan.bookTitle)}</strong>${
+        loan.bookCode
+          ? `<small class="cell-sub">Tombo ${utils.escapeHtml(
+              loan.bookCode
+            )}</small>`
+          : ""
+      }`,
+      utils.escapeHtml(loan.readerName),
+      utils.escapeHtml(loan.className || "—"),
+      utils.formatDate(loan.loanDate),
+      utils.formatDate(loan.dueDate),
+      utils.formatDate(loan.returnDate),
+      loanStatusBadge(loan.status)
+    ]);
+
+    renderDetailStats([
+      {
+        label: "Empréstimos registrados",
+        value: utils.formatNumber(view.metrics.loans),
+        note: "Total de movimentações"
+      },
+      {
+        label: "Ativos",
+        value: utils.formatNumber(view.metrics.activeLoans),
+        note: "Ainda em circulação"
+      },
+      {
+        label: "Atrasados",
+        value: utils.formatNumber(view.metrics.overdueLoans),
+        note: "Com devolução vencida"
+      },
+      {
+        label: "Devolvidos",
+        value: utils.formatNumber(view.metrics.returnedLoans),
+        note: "Empréstimos concluídos"
+      }
+    ]);
+
+    renderDetailTable(
+      [
+        { label: "ID" },
+        { label: "Livro" },
+        { label: "Aluno" },
+        { label: "Turma" },
+        { label: "Empréstimo" },
+        { label: "Prevista" },
+        { label: "Devolvido" },
+        { label: "Situação" }
+      ],
+      rows,
+      "Nenhum empréstimo registrado no banco importado."
+    );
+  }
+
+  function renderPendingReport(view) {
+    const rows = view.pendingLoans.map(loan => [
+      utils.escapeHtml(loan.readerName),
+      utils.escapeHtml(loan.className || "—"),
+      utils.escapeHtml(
+        loan.readerPhone ? utils.formatPhone(loan.readerPhone) : "—"
+      ),
+      `<strong>${utils.escapeHtml(loan.bookTitle)}</strong>`,
+      utils.formatDate(loan.dueDate),
+      `${utils.formatNumber(loan.status.days)} dia(s)`,
+      utils.escapeHtml(loan.librarianName || "—")
+    ]);
+
+    const averageDays = view.pendingLoans.length
+      ? view.pendingLoans.reduce(
+          (total, loan) => total + loan.status.days,
+          0
+        ) / view.pendingLoans.length
+      : 0;
+    const maxDays = view.pendingLoans.length
+      ? Math.max(...view.pendingLoans.map(loan => loan.status.days))
+      : 0;
+
+    renderDetailStats([
+      {
+        label: "Pendências",
+        value: utils.formatNumber(view.pendingLoans.length),
+        note: "Devoluções em atraso"
+      },
+      {
+        label: "Média de atraso",
+        value: `${formatDecimal(averageDays)} dia(s)`,
+        note: "Por empréstimo vencido"
+      },
+      {
+        label: "Alunos envolvidos",
+        value: utils.formatNumber(view.metrics.readersWithPending),
+        note: "Com devolução pendente"
+      },
+      {
+        label: "Maior atraso",
+        value: `${utils.formatNumber(maxDays)} dia(s)`,
+        note: "Empréstimo mais antigo"
+      }
+    ]);
+
+    renderDetailTable(
+      [
+        { label: "Aluno" },
+        { label: "Turma" },
+        { label: "Telefone" },
+        { label: "Livro" },
+        { label: "Prevista" },
+        { label: "Atraso", numeric: true },
+        { label: "Bibliotecário" }
+      ],
+      rows,
+      "Nenhuma devolução em atraso encontrada."
+    );
+  }
+
+  function renderBookReport(dataset, view) {
+    const books = dataset.books
+      .slice()
+      .sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
+    let loaned = 0;
+
+    const rows = books.map(book => {
+      const activeLoan = activeLoanForBook(book, view);
+      if (activeLoan) loaned += 1;
+
+      return [
+        utils.escapeHtml(book.code || "—"),
+        `<strong>${utils.escapeHtml(book.title)}</strong>`,
+        utils.escapeHtml(book.author || "—"),
+        utils.escapeHtml(book.origin || "—"),
+        utils.escapeHtml(
+          book.acquiredAtRaw || utils.formatDate(book.acquiredAt)
+        ),
+        utils.escapeHtml(
+          utils.itemStatusLabel(book.status, Boolean(activeLoan))
+        ),
+        utils.escapeHtml(
+          activeLoan
+            ? `${activeLoan.readerName}${
+                activeLoan.className ? ` · ${activeLoan.className}` : ""
+              }`
+            : "—"
+        )
+      ];
+    });
+
+    renderDetailStats([
+      {
+        label: "Livros no acervo",
+        value: utils.formatNumber(dataset.books.length),
+        note: "Itens cadastrados"
+      },
+      {
+        label: "Emprestados",
+        value: utils.formatNumber(loaned),
+        note: "Com empréstimo ativo"
+      },
+      {
+        label: "Disponíveis",
+        value: utils.formatNumber(Math.max(dataset.books.length - loaned, 0)),
+        note: "Sem empréstimo ativo"
+      },
+      {
+        label: "Pendências",
+        value: utils.formatNumber(view.metrics.overdueLoans),
+        note: "Devoluções em atraso"
+      }
+    ]);
+
+    renderDetailTable(
+      [
+        { label: "Tombo" },
+        { label: "Título" },
+        { label: "Autor" },
+        { label: "Origem" },
+        { label: "Aquisição" },
+        { label: "Situação" },
+        { label: "Empréstimo ativo" }
+      ],
+      rows,
+      "Nenhum livro cadastrado no banco importado."
+    );
+  }
+
+  function renderReaderReport(dataset, view) {
+    const readers = dataset.readers
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+    const rows = readers.map(reader => {
+      const active = view.activeByReader.get(reader.key) || 0;
+      const overdue = view.overdueByReader.get(reader.key) || 0;
+
+      return [
+        utils.escapeHtml(reader.registration || "—"),
+        `<strong>${utils.escapeHtml(reader.name)}</strong>`,
+        utils.escapeHtml(reader.className || "—"),
+        utils.escapeHtml(reader.phone ? utils.formatPhone(reader.phone) : "—"),
+        utils.escapeHtml(
+          utils.readerIsActive(reader.status) ? "Ativo" : "Inativo"
+        ),
+        utils.formatNumber(active),
+        utils.formatNumber(overdue)
+      ];
+    });
+
+    renderDetailStats([
+      {
+        label: "Alunos",
+        value: utils.formatNumber(view.metrics.readers),
+        note: "Cadastrados no banco"
+      },
+      {
+        label: "Ativos",
+        value: utils.formatNumber(view.metrics.activeReaders),
+        note: "Com cadastro ativo"
+      },
+      {
+        label: "Com pendências",
+        value: utils.formatNumber(view.metrics.readersWithPending),
+        note: "Com devolução em atraso"
+      },
+      {
+        label: "Empréstimos ativos",
+        value: utils.formatNumber(view.metrics.activeLoans),
+        note: "Em circulação"
+      }
+    ]);
+
+    renderDetailTable(
+      [
+        { label: "Matrícula" },
+        { label: "Nome" },
+        { label: "Turma" },
+        { label: "Telefone" },
+        { label: "Situação" },
+        { label: "Ativos", numeric: true },
+        { label: "Pendências", numeric: true }
+      ],
+      rows,
+      "Nenhum aluno cadastrado no banco importado."
+    );
+  }
+
+  function renderLibrarianReport(dataset, view) {
+    const loanCounts = new Map();
+    view.loans.forEach(loan => {
+      if (!loan.librarianKey) return;
+      loanCounts.set(
+        loan.librarianKey,
+        (loanCounts.get(loan.librarianKey) || 0) + 1
+      );
+    });
+
+    const countFor = librarian =>
+      loanCounts.get(librarian.key) ||
+      loanCounts.get(librarian.registration) ||
+      0;
+
+    const librarians = dataset.librarians
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+    const rows = librarians.map(librarian => {
+      const count = countFor(librarian);
+      const participation = view.metrics.loans
+        ? (count / view.metrics.loans) * 100
+        : 0;
+
+      return [
+        utils.escapeHtml(librarian.registration || "—"),
+        `<strong>${utils.escapeHtml(librarian.name)}</strong>`,
+        utils.escapeHtml(librarian.login || "—"),
+        utils.escapeHtml(
+          librarian.phone ? utils.formatPhone(librarian.phone) : "—"
+        ),
+        utils.formatNumber(count),
+        utils.formatPercent(participation)
+      ];
+    });
+
+    renderDetailStats([
+      {
+        label: "Bibliotecários",
+        value: utils.formatNumber(view.metrics.librarians),
+        note: "Cadastrados no banco"
+      },
+      {
+        label: "Empréstimos registrados",
+        value: utils.formatNumber(view.metrics.loans),
+        note: "Com vínculo de bibliotecário"
+      },
+      {
+        label: "Média por bibliotecário",
+        value: formatDecimal(
+          view.metrics.librarians
+            ? view.metrics.loans / view.metrics.librarians
+            : 0
+        ),
+        note: "Empréstimos por pessoa"
+      }
+    ]);
+
+    renderDetailTable(
+      [
+        { label: "Matrícula" },
+        { label: "Nome" },
+        { label: "Login" },
+        { label: "Telefone" },
+        { label: "Empréstimos", numeric: true },
+        { label: "Participação", numeric: true }
+      ],
+      rows,
+      "Nenhum bibliotecário cadastrado no banco importado."
+    );
+  }
+
+  function renderReportDetail(type, dataset, view) {
+    switch (type) {
+      case "classes":
+        renderClassReport(dataset, view);
+        break;
+      case "loans":
+        renderLoanReport(view);
+        break;
+      case "pending":
+        renderPendingReport(view);
+        break;
+      case "books":
+        renderBookReport(dataset, view);
+        break;
+      case "readers":
+        renderReaderReport(dataset, view);
+        break;
+      case "librarians":
+        renderLibrarianReport(dataset, view);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function renderReportSummary(dataset, view) {
     const metrics = view.metrics;
     const breakdown = reportBreakdown(dataset, view);
 
@@ -1531,13 +2084,7 @@
     };
 
     setText("#report-occupancy", utils.formatPercent(occupancy));
-    setText(
-      "#report-average",
-      new Intl.NumberFormat("pt-BR", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 1
-      }).format(averageLoans)
-    );
+    setText("#report-average", formatDecimal(averageLoans));
     setText("#report-overdue-rate", utils.formatPercent(overdueRate));
 
     renderRanking(
@@ -1562,6 +2109,33 @@
     });
   }
 
+  function renderReports() {
+    const empty = $("#reports-empty");
+    const content = $("#reports-content");
+    if (!empty || !content) return;
+
+    if (!hasAnyData()) {
+      empty.hidden = false;
+      content.hidden = true;
+      return;
+    }
+
+    empty.hidden = true;
+    content.hidden = false;
+
+    const type = reportTypeKey();
+    const dataset = data();
+    const view = BG.analytics.compute(dataset);
+
+    setReportView(type);
+
+    if (type === "summary") {
+      renderReportSummary(dataset, view);
+    } else {
+      renderReportDetail(type, dataset, view);
+    }
+  }
+
   function exportReportPdf() {
     if (!hasAnyData()) {
       showToast("Importe um banco de dados para gerar o relatório em PDF.", "error");
@@ -1571,32 +2145,36 @@
     renderReports();
     goToScreen("reports");
 
+    const type = reportTypeKey();
+    const typeInfo = REPORT_TYPES[type] || REPORT_TYPES.summary;
     const dataset = data();
     const view = BG.analytics.compute(dataset);
     const metrics = view.metrics;
 
-    const indicatorRows = [
-      ["Livros no acervo", utils.formatNumber(metrics.books)],
-      ["Alunos cadastrados", utils.formatNumber(metrics.readers)],
-      ["Bibliotecários", utils.formatNumber(metrics.librarians)],
-      ["Empréstimos registrados", utils.formatNumber(metrics.loans)],
-      ["Empréstimos ativos", utils.formatNumber(metrics.activeLoans)],
-      ["Empréstimos em atraso", utils.formatNumber(metrics.overdueLoans)],
-      ["Empréstimos devolvidos", utils.formatNumber(metrics.returnedLoans)]
-    ];
+    if (type === "summary") {
+      const indicatorRows = [
+        ["Livros no acervo", utils.formatNumber(metrics.books)],
+        ["Alunos cadastrados", utils.formatNumber(metrics.readers)],
+        ["Bibliotecários", utils.formatNumber(metrics.librarians)],
+        ["Empréstimos registrados", utils.formatNumber(metrics.loans)],
+        ["Empréstimos ativos", utils.formatNumber(metrics.activeLoans)],
+        ["Empréstimos em atraso", utils.formatNumber(metrics.overdueLoans)],
+        ["Empréstimos devolvidos", utils.formatNumber(metrics.returnedLoans)]
+      ];
 
-    const indicators = $("#report-print-indicators");
-    if (indicators) {
-      indicators.innerHTML = indicatorRows
-        .map(
-          ([label, value]) => `
-            <tr>
-              <th scope="row">${utils.escapeHtml(label)}</th>
-              <td class="numeric">${utils.escapeHtml(value)}</td>
-            </tr>
-          `
-        )
-        .join("");
+      const indicators = $("#report-print-indicators");
+      if (indicators) {
+        indicators.innerHTML = indicatorRows
+          .map(
+            ([label, value]) => `
+              <tr>
+                <th scope="row">${utils.escapeHtml(label)}</th>
+                <td class="numeric">${utils.escapeHtml(value)}</td>
+              </tr>
+            `
+          )
+          .join("");
+      }
     }
 
     const fileNode = $("#report-print-file");
@@ -1627,10 +2205,13 @@
       window.removeEventListener("afterprint", restoreTitle);
     };
 
-    document.title = `relatorio-bibliogestao-${stamp}`;
+    const typeSlug = type === "summary" ? "" : `${type}-`;
+    document.title = `relatorio-bibliogestao-${typeSlug}${stamp}`;
     window.addEventListener("afterprint", restoreTitle);
 
-    showToast('Abrindo a impressão. Escolha "Salvar como PDF" como destino.');
+    showToast(
+      `Abrindo a impressão do ${typeInfo.heading.toLowerCase()}. Escolha "Salvar como PDF".`
+    );
 
     window.setTimeout(() => {
       try {
@@ -1774,6 +2355,7 @@
     );
 
     $("#btnFecharBanco")?.addEventListener("click", closeDatabase);
+    $("#report-type")?.addEventListener("change", renderReports);
     $("#btnExportarRelatorio")?.addEventListener("click", exportReportPdf);
 
     $("#book-search")?.addEventListener("input", utils.debounce(renderBooks, 140));
