@@ -1562,71 +1562,83 @@
     });
   }
 
-  function exportReportCsv() {
+  function exportReportPdf() {
     if (!hasAnyData()) {
-      showToast("Importe um banco de dados para exportar o relatório.", "error");
+      showToast("Importe um banco de dados para gerar o relatório em PDF.", "error");
       return;
     }
+
+    renderReports();
+    goToScreen("reports");
 
     const dataset = data();
     const view = BG.analytics.compute(dataset);
     const metrics = view.metrics;
-    const breakdown = reportBreakdown(dataset, view);
 
-    const occupancy = metrics.books
-      ? (view.activeByBook.size / metrics.books) * 100
-      : 0;
-    const averageLoans = metrics.readers
-      ? metrics.activeLoans / metrics.readers
-      : 0;
-    const overdueRate = metrics.activeLoans
-      ? (metrics.overdueLoans / metrics.activeLoans) * 100
-      : 0;
-
-    const rows = [
-      ["Indicador", "Livros no acervo", metrics.books],
-      ["Indicador", "Alunos cadastrados", metrics.readers],
-      ["Indicador", "Bibliotecários", metrics.librarians],
-      ["Indicador", "Empréstimos registrados", metrics.loans],
-      ["Indicador", "Empréstimos ativos", metrics.activeLoans],
-      ["Indicador", "Empréstimos em atraso", metrics.overdueLoans],
-      ["Indicador", "Empréstimos devolvidos", metrics.returnedLoans],
-      ["Indicador", "Ocupação do acervo", utils.formatPercent(occupancy)],
-      [
-        "Indicador",
-        "Média de empréstimos ativos por aluno",
-        new Intl.NumberFormat("pt-BR", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2
-        }).format(averageLoans)
-      ],
-      ["Indicador", "Percentual de atraso", utils.formatPercent(overdueRate)]
+    const indicatorRows = [
+      ["Livros no acervo", utils.formatNumber(metrics.books)],
+      ["Alunos cadastrados", utils.formatNumber(metrics.readers)],
+      ["Bibliotecários", utils.formatNumber(metrics.librarians)],
+      ["Empréstimos registrados", utils.formatNumber(metrics.loans)],
+      ["Empréstimos ativos", utils.formatNumber(metrics.activeLoans)],
+      ["Empréstimos em atraso", utils.formatNumber(metrics.overdueLoans)],
+      ["Empréstimos devolvidos", utils.formatNumber(metrics.returnedLoans)]
     ];
 
-    breakdown.authors.forEach(item => {
-      rows.push(["Ranking de autores", item.label, item.count]);
-    });
-    breakdown.classes.forEach(item => {
-      rows.push(["Empréstimos por turma", item.label, item.count]);
-    });
-    breakdown.origins.forEach(item => {
-      rows.push(["Acervo por origem", item.label, item.count]);
-    });
-    breakdown.statuses.forEach(item => {
-      rows.push(["Acervo por situação", item.label, item.count]);
-    });
+    const indicators = $("#report-print-indicators");
+    if (indicators) {
+      indicators.innerHTML = indicatorRows
+        .map(
+          ([label, value]) => `
+            <tr>
+              <th scope="row">${utils.escapeHtml(label)}</th>
+              <td class="numeric">${utils.escapeHtml(value)}</td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    const fileNode = $("#report-print-file");
+    if (fileNode) {
+      fileNode.textContent = state().fileName || "Banco importado";
+    }
+
+    const dateNode = $("#report-print-date");
+    if (dateNode) {
+      dateNode.textContent = new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "long",
+        timeStyle: "short"
+      }).format(new Date());
+    }
 
     const today = utils.today();
     const stamp = `${today.getFullYear()}-${String(
       today.getMonth() + 1
     ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-    utils.downloadCsv(
-      `relatorio-bibliogestao-${stamp}.csv`,
-      ["Categoria", "Item", "Valor"],
-      rows
-    );
-    showToast("Relatório exportado em CSV.", "success");
+    const previousTitle = document.title;
+    let titleRestored = false;
+
+    const restoreTitle = () => {
+      if (titleRestored) return;
+      titleRestored = true;
+      document.title = previousTitle;
+      window.removeEventListener("afterprint", restoreTitle);
+    };
+
+    document.title = `relatorio-bibliogestao-${stamp}`;
+    window.addEventListener("afterprint", restoreTitle);
+
+    showToast('Abrindo a impressão. Escolha "Salvar como PDF" como destino.');
+
+    window.setTimeout(() => {
+      try {
+        window.print();
+      } finally {
+        window.setTimeout(restoreTitle, 1500);
+      }
+    }, 120);
   }
 
   // ============================ FILTROS ============================
@@ -1762,7 +1774,7 @@
     );
 
     $("#btnFecharBanco")?.addEventListener("click", closeDatabase);
-    $("#btnExportarRelatorio")?.addEventListener("click", exportReportCsv);
+    $("#btnExportarRelatorio")?.addEventListener("click", exportReportPdf);
 
     $("#book-search")?.addEventListener("input", utils.debounce(renderBooks, 140));
     $("#book-status-filter")?.addEventListener("change", renderBooks);

@@ -18,7 +18,8 @@ dados entre as telas de consulta e acompanhamento.
 - Pendências priorizadas por atraso e cobrança com mensagem pré-preenchida no
   WhatsApp.
 - Bibliotecários com volume de empréstimos registrados.
-- Relatórios consolidados com exportação em CSV.
+- Relatórios consolidados com exportação em PDF pela opção **Salvar como
+  PDF** da impressão do navegador.
 - Explorador de dados brutos do banco importado.
 
 Os requisitos completos, com critérios de aceite, estão em
@@ -53,6 +54,17 @@ botão **Importar banco** para selecionar o arquivo.
 
 O botão **Carregar exemplo** busca o `sisbac_test.db` incluído no repositório
 quando a aplicação está sendo servida por HTTP.
+
+## Como salvar o relatório em PDF
+
+1. Importe um banco de dados.
+2. Acesse a tela **Relatórios**.
+3. Clique em **🖨️ Salvar relatório em PDF**.
+4. Na janela de impressão do navegador, escolha **Salvar como PDF** como
+   destino e confirme.
+
+O relatório é formatado em A4 e inclui o banco de origem, a data de geração,
+os indicadores gerais e as distribuições do acervo e dos empréstimos.
 
 ## Estrutura do banco de referência
 
@@ -93,7 +105,7 @@ e datas em `dd/mm/aaaa`, `dd-mm-aaaa` e `aaaa-mm-dd`.
 ```text
 index.html              Estrutura das telas
 style.css               Estilos e responsividade
-js/utils.js             Datas, telefones, WhatsApp, CSV e formatação
+js/utils.js             Datas, telefones, WhatsApp e formatação
 js/schema.js            Reconhecimento de tabelas e colunas
 js/database.js          Leitura do SQLite e montagem do conjunto de dados
 js/analytics.js         Indicadores, vínculos e situação dos empréstimos

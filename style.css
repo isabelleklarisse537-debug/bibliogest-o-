@@ -1288,3 +1288,250 @@ tbody tr:hover td {
     max-width: calc(100vw - 32px);
   }
 }
+
+/* ============================== RELATÓRIO EM PDF ============================== */
+
+.report-print-header,
+.report-print-summary,
+.report-print-footer {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+    color: #172033;
+  }
+
+  body {
+    display: block;
+    font-size: 10.5pt;
+  }
+
+  main {
+    padding: 0;
+  }
+
+  aside.sidebar,
+  .screen-header,
+  .screen-toolbar,
+  .botoes-arquivos,
+  .toast,
+  button,
+  input,
+  select {
+    display: none !important;
+  }
+
+  .screen {
+    display: none !important;
+  }
+
+  #screen-reports {
+    display: block !important;
+  }
+
+  #reports-empty {
+    display: none !important;
+  }
+
+  #reports-content {
+    display: block !important;
+  }
+
+  .report-print-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--primary-strong);
+  }
+
+  .report-print-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .report-print-logo {
+    font-size: 24pt;
+    line-height: 1;
+  }
+
+  .report-print-brand h1 {
+    margin: 0;
+    font-size: 18pt;
+    letter-spacing: -0.02em;
+  }
+
+  .report-print-brand p {
+    margin: 2px 0 0;
+    color: #475569;
+    font-size: 9.5pt;
+  }
+
+  .report-print-meta {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    text-align: right;
+  }
+
+  .report-print-meta div {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    font-size: 9pt;
+  }
+
+  .report-print-meta dt {
+    color: #475569;
+    font-weight: 700;
+  }
+
+  .report-print-meta dd {
+    margin: 0;
+  }
+
+  .report-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .kpi-card {
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .kpi-icon {
+    display: none;
+  }
+
+  .kpi-label {
+    font-size: 9pt;
+  }
+
+  .kpi-value {
+    font-size: 18pt;
+  }
+
+  .kpi-note {
+    font-size: 8.5pt;
+  }
+
+  .report-print-summary {
+    display: block;
+    margin: 14px 0;
+    padding: 12px 14px;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .report-print-summary table {
+    min-width: 0;
+  }
+
+  .report-print-summary th,
+  .report-print-summary td {
+    padding: 5px 8px;
+    font-size: 9.5pt;
+  }
+
+  .report-print-summary thead th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 8.5pt;
+  }
+
+  .report-print-summary tbody th[scope="row"] {
+    background: transparent;
+    color: var(--text);
+    font-size: 9.5pt;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: normal;
+  }
+
+  .report-grid {
+    display: block;
+  }
+
+  .report-grid .panel {
+    margin-bottom: 12px;
+    break-inside: avoid;
+  }
+
+  .panel {
+    padding: 12px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .panel-head {
+    margin-bottom: 9px;
+  }
+
+  .panel-head h2 {
+    font-size: 12.5pt;
+  }
+
+  .panel-head p {
+    font-size: 9pt;
+  }
+
+  .bar-list,
+  .ranking-list {
+    gap: 8px;
+  }
+
+  .bar-label,
+  .ranking-name {
+    font-size: 9.5pt;
+  }
+
+  .bar-label span:first-child,
+  .ranking-name span:first-child {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .bar-track {
+    height: 5px;
+  }
+
+  .ranking-position {
+    width: 22px;
+    height: 22px;
+    font-size: 9pt;
+  }
+
+  .report-print-footer {
+    display: block;
+    margin-top: 16px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-strong);
+    color: #64748b;
+    font-size: 8.5pt;
+  }
+}

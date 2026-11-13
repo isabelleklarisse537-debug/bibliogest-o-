@@ -179,7 +179,8 @@ circulação.
 - [x] Exibir ranking de autores com mais títulos no acervo.
 - [x] Exibir distribuição de empréstimos por turma.
 - [x] Exibir distribuição do acervo por origem e por situação.
-- [x] Permitir exportar o relatório consolidado em CSV.
+- [x] Permitir exportar o relatório consolidado em PDF, usando a opção
+      **Salvar como PDF** da impressão do navegador.
 - [x] Atualizar os relatórios automaticamente após cada importação.
 
 ## 4. Fora de escopo nesta versão

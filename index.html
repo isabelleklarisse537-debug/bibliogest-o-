@@ -515,15 +515,37 @@
       </div>
 
       <div id="reports-content" class="stack" hidden>
+        <header class="report-print-header">
+          <div class="report-print-brand">
+            <span class="report-print-logo" aria-hidden="true">📚</span>
+            <div>
+              <h1>Bibliogestão</h1>
+              <p>Relatório consolidado do acervo e da circulação</p>
+            </div>
+          </div>
+          <dl class="report-print-meta">
+            <div>
+              <dt>Banco de dados</dt>
+              <dd id="report-print-file">—</dd>
+            </div>
+            <div>
+              <dt>Gerado em</dt>
+              <dd id="report-print-date">—</dd>
+            </div>
+          </dl>
+        </header>
+
         <div class="screen-toolbar compact">
           <div class="field field-grow">
             <label>Consolidação</label>
             <p class="field-note">
-              Indicadores calculados a partir dos registros importados.
+              Indicadores calculados a partir dos registros importados. Na
+              janela de impressão, escolha <strong>Salvar como PDF</strong>
+              como destino.
             </p>
           </div>
           <button type="button" class="btn-primary" id="btnExportarRelatorio">
-            ⬇️ Exportar relatório (CSV)
+            🖨️ Salvar relatório em PDF
           </button>
         </div>
 
@@ -555,6 +577,24 @@
             <small class="kpi-note">Sobre os empréstimos ativos</small>
           </article>
         </div>
+
+        <section class="panel report-print-summary">
+          <div class="panel-head">
+            <div>
+              <h2>Indicadores gerais</h2>
+              <p>Totais consolidados a partir do banco importado.</p>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Indicador</th>
+                <th scope="col" class="numeric">Valor</th>
+              </tr>
+            </thead>
+            <tbody id="report-print-indicators"></tbody>
+          </table>
+        </section>
 
         <div class="report-grid">
           <section class="panel">
@@ -597,6 +637,11 @@
             <div class="bar-list" id="report-status"></div>
           </section>
         </div>
+
+        <footer class="report-print-footer">
+          Bibliogestão · Relatório gerado localmente a partir do banco de dados
+          importado.
+        </footer>
       </div>
     </section>
 
